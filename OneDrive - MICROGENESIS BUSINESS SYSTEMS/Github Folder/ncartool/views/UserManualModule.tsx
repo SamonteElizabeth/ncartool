@@ -164,7 +164,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                 <a 
                   href={userManualFile.url} 
                   download={userManualFile.name}
-                  className="w-full md:w-auto px-8 py-4 bg-[#3b82f6] text-white rounded-2xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg"
+                  className="w-full md:w-auto px-8 py-4 bg-[#00316E] text-white rounded-2xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg"
                 >
                   <Download size={24} />
                   Download Manual

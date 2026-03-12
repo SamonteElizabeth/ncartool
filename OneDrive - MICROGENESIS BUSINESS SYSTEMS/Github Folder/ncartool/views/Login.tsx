@@ -20,41 +20,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#dce9ff] via-[#d8f2ff] to-[#d4f7e8] flex items-center justify-center p-4 md:p-8 [font-family:'Poppins',sans-serif] relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#edf7ff] via-[#eaf5ff] to-[#e6f2ff] flex items-center justify-center p-4 md:p-8 [font-family:'Poppins',sans-serif] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-[8%] -left-[8%] w-[38%] h-[38%] bg-cyan-200/70 rounded-full blur-[120px]"></div>
-        <div className="absolute -bottom-[8%] -right-[8%] w-[34%] h-[34%] bg-emerald-200/60 rounded-full blur-[120px]"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-[45%] h-[45%] bg-white/70 rounded-full blur-[140px]"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-white/60 rounded-full blur-[140px]"></div>
       </div>
 
       <div className="w-full max-w-5xl relative z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-        <div className="rounded-3xl border border-white/70 bg-white/30 backdrop-blur-md shadow-2xl shadow-cyan-200/40 overflow-hidden">
+        <div className="rounded-3xl border border-white/80 bg-white/45 backdrop-blur-xl shadow-2xl shadow-blue-100/40 overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 min-h-[560px]">
-            <div className="hidden md:flex relative items-center justify-center bg-gradient-to-br from-[#4b88ff] via-[#3b82f6] to-[#22c1c3]">
+            <div className="hidden md:flex relative items-center justify-center bg-[#00316E]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.24)_0%,transparent_45%)]"></div>
               <div className="absolute top-10 left-10 w-20 h-20 border border-white/25 rounded-2xl"></div>
               <div className="absolute bottom-14 right-12 w-16 h-16 border border-white/20 rounded-xl rotate-12"></div>
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-64 h-20 overflow-hidden">
-                <img
-                  src="/assets/ncar2.png"
-                  alt="NCARTool logo"
-                  className="w-full h-full object-cover scale-[1.20]"
-                />
-              </div>
-              <div className="relative z-10 text-center w-full h-full flex items-center justify-center overflow-visible pt-16">
+              <div className="relative z-10 w-full h-full flex items-center justify-center px-10">
                 <img
                   src="/assets/loginpage.png"
-                  alt="Login illustration"
-                  className="w-[135%] h-[135%] max-w-none max-h-none object-contain drop-shadow-xl"
+                  alt=""
+                  className="w-[150%] h-[150%] max-w-none max-h-none object-contain drop-shadow-xl"
                 />
               </div>
             </div>
 
-            <div className="p-8 md:p-10 lg:p-12 bg-white/55 backdrop-blur-xl">
+            <div className="p-8 md:p-10 lg:p-12 bg-white/60 backdrop-blur-2xl">
               <div className="mb-8 md:mb-10">
                 <img
+                  src="/assets/ncar2.png"
+                  alt="NCAR Tool logo"
+                  className="w-[240px] h-[64px] object-contain -ml-1"
+                />
+                <img
                   src="/assets/loginpage.png"
-                  alt="NCARTool logo"
-                  className="w-[620px] h-[120px] object-contain -ml-1 md:hidden"
+                  alt=""
+                  className="w-[500px] h-[48px] object-contain -ml-1 md:hidden"
                 />
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight mt-3 md:mt-0">Welcome Back</h2>
                 <p className="text-gray-600 font-medium mt-1">Please select your access role to continue.</p>
@@ -70,7 +68,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <select
                       value={selectedRole}
                       onChange={(e) => setSelectedRole(e.target.value as Role)}
-                      className="w-full bg-white/75 border border-white/70 focus:border-[#3b82f6] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all appearance-none cursor-pointer shadow-sm"
                     >
                       <option value="LEAD_AUDITOR">Lead Auditor</option>
                       <option value="AUDITOR">Auditor</option>
@@ -92,7 +90,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <input
                       type="password"
                       placeholder="********"
-                      className="w-full bg-white/75 border border-white/70 focus:border-[#3b82f6] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all shadow-sm"
+                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all shadow-sm"
                       defaultValue="password123"
                     />
                   </div>
@@ -101,7 +99,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-70"
+                  className="w-full bg-[#00316E] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#002A5F] transition-all uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-70"
                 >
                   {isLoading ? (
                     <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>

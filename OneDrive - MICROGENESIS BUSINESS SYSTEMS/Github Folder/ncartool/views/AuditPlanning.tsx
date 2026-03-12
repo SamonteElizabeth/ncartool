@@ -272,7 +272,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
         {isLead && (
           <button 
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-[#3b82f6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm transition-all shadow-xl shadow-blue-200"
+            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm transition-all shadow-xl shadow-blue-200"
           >
             <Plus size={20} />
             Create Plan
@@ -327,7 +327,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#3b82f6] text-white">
+              <tr className="bg-[#00316E] text-white">
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Plan ID</th>
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-widest text-center">Docs</th>
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Start Date</th>
@@ -427,7 +427,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
             <form onSubmit={handleSavePlan}>
               <div className="p-6 flex justify-between items-center border-b border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className="bg-[#3b82f6] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                  <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                     <Calendar size={24} />
                   </div>
                   <div>
@@ -534,7 +534,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
 
                 <div className="flex gap-4 pt-6 border-t border-gray-100">
                   <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
-                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#3b82f6] text-white rounded-2xl font-black hover:bg-blue-600 shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#00316E] text-white rounded-2xl font-black hover:bg-blue-600 shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
                     <CheckCircle2 size={20} />
                     {editingId ? 'Save Changes' : 'Create'}
                   </button>

@@ -57,7 +57,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-[#3b82f6] text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all"
+          className="flex items-center gap-2 bg-[#00316E] text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all"
         >
           <UserPlus size={20} />
           Add New User
@@ -93,7 +93,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#3b82f6] font-bold">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#00316E] font-bold">
                         {user.name.charAt(0)}
                       </div>
                       <div>
@@ -220,7 +220,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
               </div>
               <button 
                 type="submit"
-                className="w-full bg-[#3b82f6] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all mt-6"
+                className="w-full bg-[#00316E] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all mt-6"
               >
                 Create User Account
               </button>

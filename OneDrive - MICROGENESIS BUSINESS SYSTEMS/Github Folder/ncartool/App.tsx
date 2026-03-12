@@ -177,17 +177,14 @@ const App: React.FC = () => {
   // Use exact logo file from public assets.
   const Logo = ({ collapsed }: { collapsed: boolean }) => (
     <div
-      className={`flex items-center justify-center overflow-hidden mx-auto ${
-        collapsed ? 'w-14 h-14' : 'w-64 h-20'
+      className={`flex items-center justify-center mx-auto ${
+        collapsed ? 'w-12 h-12' : 'w-68 h-17'
       }`}
     >
       <img
         src="/assets/ncar2.png"
         alt="NCARTool logo"
-        className={`transition-all duration-200 ${
-          collapsed ? 'w-full h-full object-cover scale-[1.25]' : 'w-full h-full object-cover scale-[1.20]'
-        }`}
-        style={{ objectPosition: '50% 50%' }}
+        className="max-h-full w-auto object-contain"
       />
     </div>
   );
@@ -198,16 +195,17 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden text-base">
-      {/* Sidebar - Updated to specific user blue #3b82f6 */}
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-gradient-to-r from-[#4a87f3] to-[#2eaad1] transition-all duration-300 flex flex-col h-full z-30 shadow-2xl`}>
-        <div className="px-4 pt-5 pb-4 flex flex-col items-center border-b border-white/10 relative">
-          <div className="w-full flex justify-end lg:flex hidden absolute top-3 right-3">
+      {/* Sidebar - solid blue (#00316E) */}
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#00316E] transition-all duration-300 flex flex-col h-full z-30 shadow-2xl`}>
+        <div className="px-4 h-26 flex items-center border-b border-white/10 relative">
+          <div className="flex-1 flex justify-center">
+            <Logo collapsed={!isSidebarOpen} />
+          </div>
+          <div className="w-10 flex justify-end lg:flex hidden absolute top-3 right-3">
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-md transition-colors">
                <Menu size={20} className="text-blue-50" />
              </button>
           </div>
-          
-          <Logo collapsed={!isSidebarOpen} />
         </div>
 
         <nav className="flex-1 p-4 mt-3 space-y-2 overflow-y-auto custom-scrollbar">
@@ -217,11 +215,11 @@ const App: React.FC = () => {
               onClick={() => setActiveModule(item.id)}
               className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
                 activeModule === item.id 
-                  ? 'bg-white text-[#3b82f6] shadow-lg border border-white/20' 
+                  ? 'bg-white text-[#00316E] shadow-lg border border-white/20' 
                   : 'text-white hover:bg-white/10'
               } ${!isSidebarOpen && 'justify-center'}`}
             >
-              <item.icon size={24} className={activeModule === item.id ? 'text-[#3b82f6]' : 'text-blue-50'} />
+              <item.icon size={24} className={activeModule === item.id ? 'text-[#00316E]' : 'text-blue-50'} />
               {isSidebarOpen && <span className="font-bold text-sm">{item.label}</span>}
             </button>
           ))}
@@ -237,13 +235,13 @@ const App: React.FC = () => {
             <div className="relative group">
               <button className="p-2.5 text-gray-400 hover:bg-gray-100 rounded-full transition-colors relative">
                 <Bell size={24} />
-                <span className="absolute top-1.5 right-1.5 w-3 h-3 bg-[#3b82f6] rounded-full border-2 border-white"></span>
+                <span className="absolute top-1.5 right-1.5 w-3 h-3 bg-[#00316E] rounded-full border-2 border-white"></span>
               </button>
               {/* Notifications Dropdown */}
               <div className="absolute right-0 mt-3 w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 transform origin-top-right scale-95 group-hover:scale-100">
                 <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
                   <span className="font-black text-xs uppercase tracking-widest text-gray-400">Notifications</span>
-                  <span className="text-xs bg-[#3b82f6] text-white px-2.5 py-1 rounded-full font-bold">New</span>
+                  <span className="text-xs bg-[#00316E] text-white px-2.5 py-1 rounded-full font-bold">New</span>
                 </div>
                 <div className="max-h-96 overflow-y-auto custom-scrollbar">
                   {notifications.map(n => (
@@ -251,7 +249,7 @@ const App: React.FC = () => {
                       <div className="flex items-start gap-5">
                         <div className={`mt-2 w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                           n.type === 'success' ? 'bg-green-500' : 
-                          n.type === 'warning' ? 'bg-orange-500' : 'bg-[#3b82f6]'
+                          n.type === 'warning' ? 'bg-orange-500' : 'bg-[#00316E]'
                         }`} />
                         <div>
                           <p className="text-base text-gray-800 font-bold leading-tight mb-1.5">{n.message}</p>
@@ -262,7 +260,7 @@ const App: React.FC = () => {
                   ))}
                 </div>
                 <div className="p-4 text-center bg-gray-50/50 rounded-b-2xl border-t border-gray-50">
-                  <button className="text-sm font-black text-[#3b82f6] hover:text-blue-800 uppercase tracking-widest">Mark All as Read</button>
+                  <button className="text-sm font-black text-[#00316E] hover:text-blue-800 uppercase tracking-widest">Mark All as Read</button>
                 </div>
               </div>
             </div>

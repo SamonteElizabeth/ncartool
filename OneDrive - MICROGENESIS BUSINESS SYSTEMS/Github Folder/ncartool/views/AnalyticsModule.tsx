@@ -18,7 +18,7 @@ interface AnalyticsModuleProps {
   onNotify: (message: string, type: 'info' | 'success' | 'warning') => void;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const COLORS = ['#00316E', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, users, onNotify }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'departments' | 'managers' | 'config'>('summary');
@@ -235,11 +235,11 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} domain={[0, 100]} />
                 <Tooltip />
-                <Area type="monotone" dataKey="compliance" stroke="#3b82f6" fillOpacity={1} fill="url(#colorComp)" />
+                <Area type="monotone" dataKey="compliance" stroke="#00316E" fillOpacity={1} fill="url(#colorComp)" />
                 <defs>
                   <linearGradient id="colorComp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#00316E" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#00316E" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
               </AreaChart>
@@ -262,7 +262,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                 <Tooltip cursor={{fill: '#f9fafb'}} />
                 <Legend />
                 <Bar dataKey="Major" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Minor" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Minor" stackId="a" fill="#00316E" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="OFI" stackId="a" fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -337,7 +337,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
               <Tooltip cursor={{fill: '#f9fafb'}} />
               <Legend />
-              <Bar dataKey="NCARs" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="NCARs" fill="#00316E" radius={[4, 4, 0, 0]} />
               <Bar dataKey="OFIs" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -506,7 +506,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               onClick={() => {
                 onNotify('Configuration saved successfully.', 'success');
               }}
-              className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest"
+              className="w-full bg-[#00316E] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest"
             >
               Save Configuration
             </button>

@@ -317,7 +317,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         {canCreate && (
           <button 
             onClick={() => { setViewingNCAR(null); setFormData(initialFormData); setShowForm(true); }}
-            className="flex items-center gap-2 bg-[#3b82f6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm shadow-xl shadow-blue-200 transition-all"
+            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm shadow-xl shadow-blue-200 transition-all"
           >
             <Plus size={20} /> NCAR
           </button>
@@ -377,7 +377,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#3b82f6] text-white">
+              <tr className="bg-[#00316E] text-white">
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">NCAR ID</th>
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">Finding Type</th>
                 <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">Requirement</th>
@@ -643,13 +643,13 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         <button 
                           type="button"
                           onClick={handleApprove}
-                          className="px-10 py-3 bg-[#3b82f6] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest"
+                          className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest"
                         >
                           <CheckCircle2 size={18} /> Approve
                         </button>
                       </>
                     ) : !isAuditee ? (
-                      <button type="submit" className="px-10 py-3 bg-[#3b82f6] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest">
+                      <button type="submit" className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest">
                         <Save size={18} /> {viewingNCAR ? 'Update NCAR' : 'Save NCAR'}
                       </button>
                     ) : (
@@ -667,7 +667,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           <button 
                             type="button"
                             onClick={() => setIsCreatingActionPlan(true)}
-                            className="px-10 py-3 bg-[#3b82f6] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm uppercase tracking-widest"
+                            className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm uppercase tracking-widest"
                           >
                             {viewingNCAR.status === NCARStatus.PENDING ? 'Create Action Plan' : 'Edit Previous Plan'} <ArrowRight size={18} />
                           </button>
@@ -681,7 +681,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
               <form onSubmit={handleApSubmit}>
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
-                    <div className="bg-[#3b82f6] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                    <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                       <Edit3 size={24} />
                     </div>
                     <div>
@@ -825,7 +825,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                     </button>
                     <button 
                       type="submit" 
-                      className="px-10 py-3 bg-[#3b82f6] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm tracking-widest uppercase"
+                      className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm tracking-widest uppercase"
                     >
                       <Send size={18} /> Submit for Review
                     </button>
