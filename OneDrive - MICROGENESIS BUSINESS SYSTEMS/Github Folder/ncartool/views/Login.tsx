@@ -44,23 +44,29 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <div className="p-8 md:p-10 lg:p-12 bg-white/60 backdrop-blur-2xl">
               <div className="mb-8 md:mb-10">
-                <img
-                  src="/assets/ncar2.png"
-                  alt="NCAR Tool logo"
-                  className="w-[240px] h-[64px] object-contain -ml-1"
-                />
+                <div className="flex justify-center">
+                  <img
+                    src="/assets/ncar2.png"
+                    alt="NCAR Tool logo"
+                    width={272}
+                    height={68}
+                    className="w-68 h-17 object-contain"
+                  />
+                </div>
                 <img
                   src="/assets/loginpage.png"
                   alt=""
-                  className="w-[500px] h-[48px] object-contain -ml-1 md:hidden"
+                  width={500}
+                  height={48}
+                  className="w-[500px] h-[48px] object-contain mx-auto md:hidden"
                 />
-                <h2 className="text-3xl font-black text-gray-900 tracking-tight mt-3 md:mt-0">Welcome Back</h2>
+                <h2 className="text-3xl font-black text-gray-800 tracking-tight mt-3 md:mt-0">Welcome Back</h2>
                 <p className="text-gray-600 font-medium mt-1">Please select your access role to continue.</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-6 text-sm text-[#4B5563] font-medium">
                 <div className="space-y-3">
-                  <label className="text-xs font-black text-gray-500 uppercase tracking-widest block ml-1">Access Role</label>
+                  <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest block ml-1">Access Role</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                       <ShieldCheck size={20} />
@@ -68,7 +74,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <select
                       value={selectedRole}
                       onChange={(e) => setSelectedRole(e.target.value as Role)}
-                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 text-gray-800 outline-none transition-all appearance-none cursor-pointer shadow-sm font-normal"
                     >
                       <option value="LEAD_AUDITOR">Lead Auditor</option>
                       <option value="AUDITOR">Auditor</option>
@@ -82,7 +88,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs font-black text-gray-500 uppercase tracking-widest block ml-1">Password</label>
+                  <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest block ml-1">Password</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                       <Lock size={20} />
@@ -90,7 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <input
                       type="password"
                       placeholder="********"
-                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-900 outline-none transition-all shadow-sm"
+                      className="w-full bg-white/75 border border-white/70 focus:border-[#00316E] rounded-2xl py-4 pl-12 pr-4 text-gray-800 outline-none transition-all shadow-sm font-normal"
                       defaultValue="password123"
                     />
                   </div>
@@ -120,3 +126,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 };
 
 export default Login;
+
+
+
+
+
+
+

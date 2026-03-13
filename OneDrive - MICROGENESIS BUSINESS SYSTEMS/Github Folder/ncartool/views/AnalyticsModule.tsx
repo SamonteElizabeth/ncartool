@@ -173,7 +173,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
             </div>
             <div>
               <p className="text-sm font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
-              <p className="text-2xl font-black text-gray-900">{kpi.value}</p>
+              <p className="text-2xl font-black text-gray-800">{kpi.value}</p>
             </div>
           </div>
         ))}
@@ -183,7 +183,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         {/* Finding Distribution */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Finding Distribution</h3>
+            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Finding Distribution</h3>
             <PieChartIcon className="text-gray-400" size={20} />
           </div>
           <div className="h-[300px]">
@@ -216,7 +216,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         {/* Compliance Trend */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Compliance Trend</h3>
+            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Compliance Trend</h3>
             <TrendingUp className="text-gray-400" size={20} />
           </div>
           <div className="h-[300px]">
@@ -250,7 +250,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         {/* Top 5 Non-compliant Processes */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Top 5 Non-compliant Processes</h3>
+            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Top 5 Non-compliant Processes</h3>
             <Activity className="text-gray-400" size={20} />
           </div>
           <div className="h-[300px]">
@@ -272,7 +272,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         {/* Avg Response TAT by Audit Type */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Avg Response TAT by Audit Type</h3>
+            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Avg Response TAT by Audit Type</h3>
             <Clock className="text-gray-400" size={20} />
           </div>
           <div className="h-[300px]">
@@ -291,7 +291,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         {/* Recent Activities */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Recent Compliance Activities</h3>
+            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Recent Compliance Activities</h3>
             <Activity className="text-gray-400" size={20} />
           </div>
           <div className="space-y-6">
@@ -302,22 +302,22 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                     {ncar.status === NCARStatus.CLOSED ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
                   </div>
                   <div>
-                    <p className="text-sm font-black text-gray-900">{ncar.statement.substring(0, 60)}...</p>
+                    <p className="text-sm font-normal text-gray-800">{ncar.statement.substring(0, 60)}...</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm font-black text-blue-500 uppercase tracking-widest">{ncar.id}</span>
+                      <span className="text-sm font-bold text-blue-500 uppercase tracking-widest">{ncar.id}</span>
                       <span className="text-sm font-bold text-gray-400">•</span>
                       <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{ncar.area}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-gray-900 capitalize">{ncar.status.toLowerCase().replace('_', ' ')}</p>
+                  <p className="text-sm font-bold text-gray-800 capitalize">{ncar.status.toLowerCase().replace('_', ' ')}</p>
                   <p className="text-sm font-bold text-gray-400 mt-1">{new Date(ncar.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full mt-8 py-4 text-sm font-black text-blue-600 hover:bg-blue-50 rounded-2xl transition-all uppercase tracking-widest">
+          <button className="w-full mt-8 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-2xl transition-all uppercase tracking-widest">
             View All Activities
           </button>
         </div>
@@ -328,7 +328,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
   const renderDepartments = () => (
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Departmental Performance Comparison</h3>
+        <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight mb-8">Departmental Performance Comparison</h3>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={deptData}>
@@ -354,10 +354,10 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Closure Rate</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 text-[#4B5563]">
             {deptData.map((dept, i) => (
               <tr key={i} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-5 py-4 font-bold text-gray-900">{dept.name}</td>
+                <td className="px-5 py-4 font-bold text-[#4B5563]">{dept.name}</td>
                 <td className="px-5 py-4 font-bold text-blue-600">{dept.NCARs}</td>
                 <td className="px-5 py-4 font-bold text-emerald-600">{dept.OFIs}</td>
                 <td className="px-5 py-4">
@@ -390,7 +390,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
             <div className="flex justify-between items-start mb-6">
               <div>
                 <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Department Head</p>
-                <h3 className="text-xl font-black text-gray-900">{head.name}</h3>
+                <h3 className="text-xl font-black text-gray-800">{head.name}</h3>
                 <p className="text-sm font-bold text-blue-600">{head.dept}</p>
               </div>
               <div className={`px-4 py-2 rounded-2xl font-black text-lg ${head.avgManagerScore >= 90 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
@@ -400,7 +400,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
             <div className="space-y-4">
               <div className="flex justify-between items-center text-sm">
                 <span className="font-bold text-gray-500">Aggregate Manager KPI</span>
-                <span className="font-black text-gray-900">{head.avgManagerScore}%</span>
+                <span className="font-black text-gray-800">{head.avgManagerScore}%</span>
               </div>
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div 
@@ -419,7 +419,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
       {/* Manager Detailed Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 bg-gray-50/50">
-          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Manager Performance Index</h3>
+          <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Manager Performance Index</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -433,14 +433,14 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                 <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">KPI Score</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 text-[#4B5563]">
               {managerData.map((manager, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-5 py-4">
-                    <p className="font-bold text-gray-900">{manager.name}</p>
+                    <p className="font-bold text-[#4B5563]">{manager.name}</p>
                     <p className="text-sm text-gray-500">{manager.dept}</p>
                   </td>
-                  <td className="px-5 py-4 font-bold text-gray-700">{manager.totalNCARs}</td>
+                  <td className="px-5 py-4 font-bold text-[#4B5563]">{manager.totalNCARs}</td>
                   <td className="px-5 py-4">
                     <span className={`font-bold ${manager.escalated > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                       {manager.escalated}
@@ -483,20 +483,20 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
           <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
             <Settings size={24} />
           </div>
-          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Analytics Configuration</h3>
+          <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Analytics Configuration</h3>
         </div>
         
         <div className="space-y-5">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-sm font-black text-gray-700 uppercase tracking-widest">Response TAT Threshold (Working Days)</label>
+              <label className="text-sm text-[#4B5563] font-bold uppercase tracking-widest">Response TAT Threshold (Working Days)</label>
               <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-black">{tatThreshold} Days</span>
             </div>
             <input 
               type="range" min="1" max="15" step="1" 
               value={tatThreshold} 
               onChange={(e) => setTatThreshold(Number(e.target.value))}
-              className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-600 font-normal"
             />
             <p className="text-xs text-gray-400 font-medium">NCARs and OFIs not responded to within this period will be flagged as overdue.</p>
           </div>
@@ -521,7 +521,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
          <div>
-          <h3 className="text-3xl font-black text-gray-900 tracking-tight">Analytics</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Analytics</h3>
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
@@ -530,7 +530,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
             <select 
               value={selectedAuditType} 
               onChange={(e) => setSelectedAuditType(e.target.value as any)}
-              className="bg-transparent border-none text-l font-black text-gray-700 outline-none cursor-pointer appearance-none pr-8"
+              className="bg-transparent border-none text-l text-[#4B5563] outline-none cursor-pointer appearance-none pr-8 font-normal"
             >
               <option value="All">All Audit Types</option>
               <option value="Quality/InfoSec">Quality/InfoSec</option>
@@ -555,10 +555,10 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2.5 px-6 py-3 rounded-[1.5rem] text-l font-black transition-all ${
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-[1.5rem] text-l font-bold transition-all ${
               activeTab === tab.id 
                 ? 'bg-white text-blue-600 shadow-md' 
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-500 hover:text-[#4B5563]'
             }`}
           >
             <tab.icon size={18} />
@@ -579,4 +579,11 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
 };
 
 export default AnalyticsModule;
+
+
+
+
+
+
+
 

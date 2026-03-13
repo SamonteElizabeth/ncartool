@@ -312,7 +312,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 tracking-tight">NCARs</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">NCARs</h3>
         </div>
         {canCreate && (
           <button 
@@ -332,7 +332,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
             placeholder="Search NCARs..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+            className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-normal"
           />
         </div>
         <div className="flex gap-3 relative" ref={filterRef}>
@@ -346,14 +346,14 @@ const NCARModule: React.FC<NCARModuleProps> = ({
             <div className="absolute top-full right-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl p-4 z-40">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Finding Types</span>
               {['Major', 'Minor', 'OFI'].map(type => (
-                <label key={type} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                <label key={type} className="text-sm text-[#4B5563] font-bold flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                   <input 
                     type="checkbox" 
                     checked={typeFilters.includes(type)}
                     onChange={() => setTypeFilters(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                    className="w-4 h-4 rounded text-blue-600"
+                    className="w-4 h-4 rounded text-blue-600 font-normal"
                   />
-                  <span className="text-sm font-bold text-gray-700">{type}</span>
+                  <span className="text-sm font-bold text-[#4B5563]">{type}</span>
                 </label>
               ))}
             </div>
@@ -361,7 +361,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-gray-50 border-none rounded-xl px-5 py-3 text-sm font-black text-gray-600 outline-none cursor-pointer focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
           >
             <option value="All Status">All Status</option>
             <option value="Pending">Pending</option>
@@ -378,38 +378,38 @@ const NCARModule: React.FC<NCARModuleProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#00316E] text-white">
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">NCAR ID</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">Finding Type</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide">Requirement</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide text-center">Deadline</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide text-center">Status</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-wide text-center">Action</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">NCAR ID</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">Finding Type</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">Requirement</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Deadline</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Status</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredNCARs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-gray-400 font-black uppercase tracking-widest italic opacity-60">No NCARs matching criteria</td>
+                  <td colSpan={6} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest italic opacity-60">No NCARs matching criteria</td>
                 </tr>
               ) : (
                 filteredNCARs.map(ncar => (
                   <tr key={ncar.id} className="hover:bg-blue-50/20 transition-all group">
                     <td className="px-5 py-4">
-                      <span className="text-sm font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{ncar.id}</span>
+                      <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{ncar.id}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`text-sm font-black px-3 py-1 rounded-full uppercase border ${
+                      <span className={`text-sm font-bold px-3 py-1 rounded-full uppercase border ${
                         ncar.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'
                       }`}>
                         {ncar.findingType}
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <p className="font-bold text-gray-900 text-sm line-clamp-1">{ncar.requirement}</p>
+                      <p className="font-bold text-[#4B5563] text-sm line-clamp-1">{ncar.requirement}</p>
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <div className="text-sm font-black text-gray-900">{new Date(ncar.deadline).toLocaleDateString()}</div>
-                      <div className="text-xs font-black text-blue-500 uppercase mt-0.5">{getDaysRemaining(ncar.deadline)} days left</div>
+                      <div className="text-sm font-bold text-[#4B5563]">{new Date(ncar.deadline).toLocaleDateString()}</div>
+                      <div className="text-xs font-bold text-blue-500 uppercase mt-0.5">{getDaysRemaining(ncar.deadline)} days left</div>
                     </td>
                     <td className="px-5 py-4 text-center">
                       <span className={`text-sm font-black px-3 py-1 rounded-full uppercase border ${
@@ -449,20 +449,20 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             {!isCreatingActionPlan ? (
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
                     <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 shadow-lg">
                       {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? <RefreshCcw size={24} /> : <Eye size={24} />) : viewingNCAR ? <Edit3 size={24} /> : <AlertTriangle size={24} />}
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-gray-900 tracking-tight">
-                        {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? 'Review & Plan' : 'View Finding Details') : viewingNCAR ? `Edit NCAR: ${viewingNCAR.id}` : 'Raise New NCAR'}
+                      <h4 className="text-2xl font-black text-gray-800 tracking-tight">
+                        {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? 'Review & Plan' : 'View Finding Details') : viewingNCAR ? `Edit NCAR: ${viewingNCAR.id}` : 'New NCAR'}
                       </h4>
-                      <p className="text-sm text-gray-500 font-medium">Audit context and finding severity log.</p>
+                      <p className="text-sm text-[#4B5563] font-medium">Audit context and finding severity log.</p>
                     </div>
                   </div>
-                  <button type="button" onClick={closeForm} className="text-gray-400 hover:text-gray-900 bg-gray-50 p-2 rounded-full transition-all">
+                  <button type="button" onClick={closeForm} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
                     <X size={24} />
                   </button>
                 </div>
@@ -482,33 +482,33 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
                   <div className="space-y-6">
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Finding Statement</label>
+                      <label className="text-sm text-[#4B5563] font-bold">Finding Statement</label>
                       <textarea 
                         readOnly={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                         required
                         value={formData.statement}
                         onChange={(e) => setFormData({...formData, statement: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm font-bold min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                       ></textarea>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Objective Evidence</label>
+                      <label className="text-sm text-[#4B5563] font-bold">Objective Evidence</label>
                       <textarea 
                         readOnly={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                         required
                         value={formData.evidence}
                         onChange={(e) => setFormData({...formData, evidence: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm font-bold min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                       ></textarea>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Attachment</label>
+                      <label className="text-sm text-[#4B5563] font-bold">Attachment</label>
                       <div className="relative group">
                         <input 
                           type="file" 
                           onChange={handleFileChange}
-                          className="hidden" 
+                          className="hidden font-normal" 
                           id="ncar-main-file-upload"
                           disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                         />
@@ -519,7 +519,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           <Paperclip size={20} className="text-blue-500" />
                           <div className="text-left">
                             <p className="text-sm font-black text-blue-900">{formData.attachmentName || 'Click to upload audit files'}</p>
-                            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-0.5">PDF, DOCX or ZIP up to 10MB</p>
+                            <p className="text-[10px] text-blue-400 uppercase tracking-widest mt-0.5">PDF, DOCX or ZIP up to 10MB</p>
                           </div>
                         </label>
                       </div>
@@ -529,12 +529,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Audit Type</label>
+                        <label className="text-sm text-[#4B5563] font-bold">Audit Type</label>
                         <select 
                           disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                           value={formData.auditType}
                           onChange={(e) => setFormData({...formData, auditType: e.target.value as any})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                         >
                           <option value="" disabled>Select an audit type</option>
                           <option value="Quality/InfoSec">Quality/InfoSec</option>
@@ -543,14 +543,14 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         </select>
                       </div>
                     <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                          <label className="text-sm text-[#4B5563] font-bold">
                             Process Name
                           </label>
                           <select
                             disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                             value={formData.processName}
                             onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                           >
                             <option value="" disabled>
                               Select a process
@@ -565,12 +565,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         </div> 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Finding Type</label>
+                        <label className="text-sm text-[#4B5563] font-bold">Finding Type</label>
                         <select 
                           disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                           value={formData.type}
                           onChange={(e) => setFormData({...formData, type: e.target.value as any})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                         >
                           <option value="Major">Major</option>
                           <option value="Minor">Minor</option>
@@ -579,7 +579,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Date</label>
+                          <label className="text-sm text-[#4B5563] font-bold">Due Date</label>
                           <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
                              <Clock size={10} className="text-blue-500" />
                              <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">
@@ -592,28 +592,28 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           type="date" 
                           value={formData.dueDate}
                           onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Requirement Clause</label>
+                      <label className="text-sm text-[#4B5563] font-bold">Requirement Clause</label>
                       <select 
                         disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                         value={formData.clause}
                         onChange={(e) => setFormData({...formData, clause: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                       >
                         {REQUIREMENTS.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Responsible Area</label>
+                      <label className="text-sm text-[#4B5563] font-bold">Responsible Area</label>
                       <select 
                         disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
                         value={formData.area}
                         onChange={(e) => setFormData({...formData, area: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
                       >
                         {FINDING_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
@@ -649,7 +649,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         </button>
                       </>
                     ) : !isAuditee ? (
-                      <button type="submit" className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest">
+                      <button type="submit" className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest">
                         <Save size={18} /> {viewingNCAR ? 'Update NCAR' : 'Save NCAR'}
                       </button>
                     ) : (
@@ -678,20 +678,20 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleApSubmit}>
+              <form onSubmit={handleApSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
                     <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                       <Edit3 size={24} />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-gray-900 tracking-tight">
+                      <h4 className="text-2xl font-black text-gray-800 tracking-tight">
                         {viewingNCAR?.rejectionRemarks ? 'Action Plan Revision' : 'Create Action Plan'}
                       </h4>
                       <p className="text-sm text-gray-500 font-medium">Ref: {viewingNCAR?.id}</p>
                     </div>
                   </div>
-                  <button type="button" onClick={() => setIsCreatingActionPlan(false)} className="text-gray-400 hover:text-gray-900 bg-gray-50 p-2 rounded-full transition-all">
+                  <button type="button" onClick={() => setIsCreatingActionPlan(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
                     <X size={24} />
                   </button>
                 </div>
@@ -711,58 +711,58 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                     <div className="flex items-center gap-2 text-blue-600 mb-2 font-black text-xs uppercase tracking-widest">
                       <AlertCircle size={16} /> Non-Conformance Statement
                     </div>
-                    <p className="text-sm text-gray-700 font-bold leading-relaxed italic">"{viewingNCAR?.statement}"</p>
+                    <p className="text-sm text-[#4B5563] font-bold leading-relaxed italic">"{viewingNCAR?.statement}"</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Immediate Correction</label>
+                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Immediate Correction</label>
                         <textarea 
                           required
                           value={apFormData.correction}
                           onChange={(e) => setApFormData({...apFormData, correction: e.target.value})}
                           placeholder="What steps were taken immediately to contain this?" 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm font-bold min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
                         ></textarea>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Root Cause Analysis (RCA)</label>
+                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Root Cause Analysis (RCA)</label>
                         <textarea 
                           required
                           value={apFormData.rootCause}
                           onChange={(e) => setApFormData({...apFormData, rootCause: e.target.value})}
                           placeholder="Why did this happen? Identify systemic failures..." 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm font-bold min-h-[120px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
                         ></textarea>
                       </div>
                     </div>
 
                     <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Long-term Corrective Action</label>
+                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Long-term Corrective Action</label>
                         <textarea 
                           required
                           value={apFormData.actionPlan}
                           onChange={(e) => setApFormData({...apFormData, actionPlan: e.target.value})}
                           placeholder="How will we prevent recurrence? Detail the strategy..." 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm font-bold min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
+                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
                         ></textarea>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Assignee</label>
+                          <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block">Assignee</label>
                           <input 
                             required
                             type="text" 
                             value={apFormData.responsible}
                             onChange={(e) => setApFormData({...apFormData, responsible: e.target.value})}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500" 
+                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal" 
                           />
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target Date</label>
+                            <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest">Target Date</label>
                             <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
                                <Clock size={10} className="text-blue-500" />
                                <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">
@@ -775,22 +775,22 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                             type="date" 
                             value={apFormData.dueDate}
                             onChange={(e) => setApFormData({...apFormData, dueDate: e.target.value})}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-bold outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500" 
+                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal" 
                           />
                         </div>
                       </div>
                       
                       <div className="pt-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Implementation Evidence Artifacts</label>
+                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Implementation Evidence Artifacts</label>
                         <input 
                           type="file" 
                           onChange={handleApFileChange}
-                          className="hidden" 
+                          className="hidden font-normal" 
                           id="ncar-ap-file-upload"
                         />
                         <label 
                           htmlFor="ncar-ap-file-upload"
-                          className="flex items-center gap-3 bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-xl p-3.5 px-5 cursor-pointer hover:bg-blue-100/50 hover:border-blue-400 transition-all shadow-sm"
+                          className="text-sm text-[#4B5563] font-bold flex items-center gap-3 bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-xl p-3.5 px-5 cursor-pointer hover:bg-blue-100/50 hover:border-blue-400 transition-all shadow-sm"
                         >
                           <FileUp size={20} className="text-blue-500" />
                           <div className="text-left overflow-hidden">
@@ -852,7 +852,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
                   <MessageSquare size={14} /> 
                   Provide reason for rejection (Required)
                 </label>
@@ -862,7 +862,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                   value={rejectionRemarks}
                   onChange={(e) => setRejectionRemarks(e.target.value)}
                   placeholder="Explain why this action plan is not acceptable..."
-                  className="w-full bg-red-50/20 border-2 border-red-50 rounded-2xl p-5 text-sm font-bold text-gray-700 outline-none focus:ring-4 focus:ring-red-100 focus:border-red-200 transition-all min-h-[120px] resize-none"
+                  className="w-full bg-red-50/20 border-2 border-red-50 rounded-2xl p-5 text-sm text-[#4B5563] outline-none focus:ring-4 focus:ring-red-100 focus:border-red-200 transition-all min-h-[120px] resize-none font-normal"
                 />
               </div>
 
@@ -890,4 +890,11 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 };
 
 export default NCARModule;
+
+
+
+
+
+
+
 

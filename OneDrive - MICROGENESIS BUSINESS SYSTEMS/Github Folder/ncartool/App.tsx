@@ -177,14 +177,16 @@ const App: React.FC = () => {
   // Use exact logo file from public assets.
   const Logo = ({ collapsed }: { collapsed: boolean }) => (
     <div
-      className={`flex items-center justify-center mx-auto ${
-        collapsed ? 'w-12 h-12' : 'w-68 h-17'
+      className={`flex items-center justify-center overflow-hidden mx-auto ${
+        collapsed ? 'w-14 h-14' : 'w-64 h-20'
       }`}
     >
       <img
         src="/assets/ncar2.png"
-        alt="NCARTool logo"
-        className="max-h-full w-auto object-contain"
+        className={`transition-all duration-200 ${
+          collapsed ? 'w-full h-full object-cover scale-[1.25]' : 'w-full h-full object-cover scale-[1.20]'
+        }`}
+        style={{ objectPosition: '50% 50%' }}
       />
     </div>
   );
@@ -196,16 +198,15 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden text-base">
       {/* Sidebar - solid blue (#00316E) */}
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#00316E] transition-all duration-300 flex flex-col h-full z-30 shadow-2xl`}>
-        <div className="px-4 h-26 flex items-center border-b border-white/10 relative">
-          <div className="flex-1 flex justify-center">
-            <Logo collapsed={!isSidebarOpen} />
-          </div>
-          <div className="w-10 flex justify-end lg:flex hidden absolute top-3 right-3">
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#00316E] transition-all duration-300 flex flex-col h-full z-30 shadow-2xl [font-family:'Poppins',sans-serif]`}>
+        <div className="px-4 pt-5 pb-4 flex flex-col items-center border-b border-white/10 relative">
+          <div className="w-full flex justify-end lg:flex hidden absolute top-3 right-3">
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-md transition-colors">
                <Menu size={20} className="text-blue-50" />
              </button>
           </div>
+          
+          <Logo collapsed={!isSidebarOpen} />
         </div>
 
         <nav className="flex-1 p-4 mt-3 space-y-2 overflow-y-auto custom-scrollbar">

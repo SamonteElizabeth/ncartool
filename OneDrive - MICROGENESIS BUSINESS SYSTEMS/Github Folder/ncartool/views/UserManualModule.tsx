@@ -70,7 +70,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
             <FileText className="text-blue-600" size={32} />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">USER MANUAL</h1>
+            <h1 className="text-2xl font-bold text-gray-800 tracking-tight">User Manual</h1>
           </div>
         </div>
 
@@ -90,13 +90,13 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                   type="file" 
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
-                  className="hidden" 
+                  className="hidden font-normal" 
                   accept=".pdf,.doc,.docx"
                 />
                 <div className="p-6 bg-blue-100 rounded-full mb-6">
                   <Upload className="text-blue-600" size={48} />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Upload User Manual</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Upload User Manual</h3>
                 <p className="text-gray-500 text-center max-w-xs">
                   Drag and drop the manual here, or click to browse files.
                   <br />
@@ -110,7 +110,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                     <FileText className="text-blue-600" size={40} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{userManualFile.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-800">{userManualFile.name}</h3>
                     <p className="text-sm text-gray-500 font-medium">Uploaded on {userManualFile.uploadedAt}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <CheckCircle size={16} className="text-green-500" />
@@ -142,7 +142,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
               <Info className="text-gray-400 mt-1" size={20} />
               <div>
                 <p className="text-sm text-gray-600 font-medium">
-                  As a <span className="font-bold text-gray-900">Dev Admin</span>, you are responsible for maintaining the system documentation. 
+                  As a <span className="font-bold text-gray-800">Dev Admin</span>, you are responsible for maintaining the system documentation. 
                   Uploading a new file will replace the current manual for all users.
                 </p>
               </div>
@@ -157,7 +157,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                     <FileText className="text-blue-600" size={40} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{userManualFile.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-800">{userManualFile.name}</h3>
                     <p className="text-sm text-gray-500 font-medium">Version updated: {userManualFile.uploadedAt}</p>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                 <div className="p-6 bg-white rounded-full mb-6 shadow-sm">
                   <AlertCircle className="text-orange-500" size={48} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Manual Not Available</h3>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Manual Not Available</h3>
                 <p className="text-gray-600 max-w-md">
                   The system administrator has not uploaded the user manual yet. 
                   Please check back later or contact IT support.
@@ -190,7 +190,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                 { title: 'Role Permissions', desc: 'What you can and cannot do' }
               ].map((item, i) => (
                 <div key={i} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <h4 className="font-bold text-gray-900 mb-1">{item.title}</h4>
+                  <h4 className="font-bold text-gray-800 mb-1">{item.title}</h4>
                   <p className="text-sm text-gray-500">{item.desc}</p>
                 </div>
               ))}
@@ -203,4 +203,11 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
 };
 
 export default UserManualModule;
+
+
+
+
+
+
+
 

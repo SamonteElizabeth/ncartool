@@ -53,7 +53,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">USER MANAGEMENT</h1>
+          <h1 className="text-3xl font-black text-gray-800 tracking-tight">USER MANAGEMENT</h1>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -73,7 +73,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
               placeholder="Search by name, email, or department..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-normal"
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 text-[#4B5563]">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4">
@@ -97,7 +97,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                         {user.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900">{user.name}</p>
+                        <p className="font-bold text-[#4B5563]">{user.name}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
@@ -113,7 +113,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                       user.role === 'DEV_ADMIN' ? 'bg-purple-100 text-purple-700' :
                       user.role === 'LEAD_AUDITOR' ? 'bg-blue-100 text-blue-700' :
                       user.role === 'AUDITOR' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-gray-100 text-gray-700'
+                      'bg-gray-100 text-[#4B5563]'
                     }`}>
                       <Shield size={12} />
                       {user.role.replace('_', ' ')}
@@ -140,51 +140,51 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Add New User</h2>
+              <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Add New User</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+            <form onSubmit={handleAddUser} className="p-6 space-y-4 text-sm text-[#4B5563] font-medium">
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Full Name</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Full Name</label>
                 <input 
                   required
                   type="text"
                   value={newUser.name}
                   onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
                   placeholder="e.g. John Smith"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Email Address</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Email Address</label>
                 <input 
                   required
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
                   placeholder="john@example.com"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Department</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Department</label>
                 <input 
                   required
                   type="text"
                   value={newUser.dept}
                   onChange={(e) => setNewUser({...newUser, dept: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
                   placeholder="e.g. Quality Assurance"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Designation</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Designation</label>
                 <select 
                   value={newUser.designation}
                   onChange={(e) => setNewUser({...newUser, designation: e.target.value as any})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
                 >
                   <option value="Staff">Staff</option>
                   <option value="Supervisor">Supervisor</option>
@@ -194,11 +194,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Reports To (Superior ID)</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Reports To (Superior ID)</label>
                 <select 
                   value={newUser.reportsTo}
                   onChange={(e) => setNewUser({...newUser, reportsTo: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
                 >
                   <option value="">None</option>
                   {users.map(u => (
@@ -207,11 +207,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">System Role</label>
+                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">System Role</label>
                 <select 
                   value={newUser.role}
                   onChange={(e) => setNewUser({...newUser, role: e.target.value as Role})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
                 >
                   <option value="LEAD_AUDITOR">Lead Auditor</option>
                   <option value="AUDITOR">Auditor</option>
@@ -233,4 +233,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
 };
 
 export default UserManagement;
+
+
+
+
+
+
+
 

@@ -61,7 +61,7 @@ const MultiSelectDropdown = ({
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="text-sm font-black text-gray-400 uppercase tracking-widest block mb-2">{label}</label>
+      <label className="text-sm text-[#4B5563] font-bold uppercase tracking-widest block mb-2">{label}</label>
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 flex items-center justify-between cursor-pointer focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[48px]"
@@ -266,13 +266,13 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 tracking-tight">Audit Plan</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Audit Plan</h3>
         </div>
         
         {isLead && (
           <button 
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm transition-all shadow-xl shadow-blue-200"
+            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-blue-200"
           >
             <Plus size={20} />
             Create Plan
@@ -289,7 +289,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
             placeholder="Search plans by ID or User..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+            className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-normal"
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-center">
@@ -300,13 +300,14 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               title="Filter by active date"
-              className="w-full sm:w-48 pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-black text-gray-600 outline-none cursor-pointer"
+              className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl py-3 pl-12 pr-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal appearance-none"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-48 bg-gray-50 border-none rounded-xl px-5 py-3 text-sm font-black text-gray-600 outline-none cursor-pointer focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
+
           >
             <option>All Status</option>
             {Object.values(AuditStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -328,22 +329,22 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#00316E] text-white">
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Plan ID</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest text-center">Docs</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Start Date</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">End Date</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Teams</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest">Status</th>
-                <th className="px-5 py-4 text-sm font-black uppercase tracking-widest text-center">Actions</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Plan ID</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Docs</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Start Date</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">End Date</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Teams</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Status</th>
+                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredPlans.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center opacity-40">
                       <Search size={48} className="mb-4" />
-                      <p className="font-black uppercase tracking-widest">No plans matching criteria</p>
+                      <p className="font-bold uppercase tracking-widest">No plans matching criteria</p>
                     </div>
                   </td>
                 </tr>
@@ -351,13 +352,13 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 filteredPlans.map((plan) => (
                   <tr key={plan.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-5 py-4">
-                      <span className="text-[12px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{plan.id}</span>
+                      <span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{plan.id}</span>
                     </td>
                     <td className="px-5 py-4 text-center">
                       {plan.attachmentName ? (
                          <div className="flex flex-col items-center gap-1 group/file cursor-pointer" onClick={() => onNotify(`Downloading ${plan.attachmentName}`)}>
                            <FileIcon size={18} className="text-blue-500 group-hover/file:scale-110 transition-transform" />
-                           <span className="text-[9px] font-black text-gray-400 truncate max-w-[80px] uppercase tracking-tighter">{plan.attachmentName}</span>
+                           <span className="text-[9px] font-bold text-gray-400 truncate max-w-[80px] uppercase tracking-tighter">{plan.attachmentName}</span>
                          </div>
                       ) : (
                         <span className="text-[12px] text-gray-300">N/A</span>
@@ -381,7 +382,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                           <Users size={14} className="mt-0.5 flex-shrink-0" />
                           <span>Auditors: {plan.auditors.join(', ')}</span>
                         </div>
-                        <div className="flex items-start gap-1.5 text-[12px] text-gray-500 font-bold uppercase tracking-tighter">
+                        <div className="flex items-start gap-1.5 text-[12px] text-gray-500 uppercase tracking-tighter">
                           <Users size={14} className="mt-0.5 flex-shrink-0" />
                           <span>Auditees: {plan.auditees.join(', ')}</span>
                         </div>
@@ -424,18 +425,18 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
       {showModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <form onSubmit={handleSavePlan}>
+            <form onSubmit={handleSavePlan} className="text-sm text-[#4B5563] font-medium">
               <div className="p-6 flex justify-between items-center border-b border-gray-100">
                 <div className="flex items-center gap-4">
                   <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                     <Calendar size={24} />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-black text-gray-900 tracking-tight">{editingId ? 'Update Audit Plan' : 'New Audit Schedule'}</h4>
+                    <h4 className="text-2xl font-black text-gray-800 tracking-tight">{editingId ? 'Update Audit Plan' : 'New Audit Plan'}</h4>
                     <p className="text-sm text-gray-500 font-medium">{editingId ? `Editing plan details for ${editingId}` : 'Set timeline and assign responsibilities.'}</p>
                   </div>
                 </div>
-                <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-900 bg-gray-50 p-2 rounded-full transition-all">
+                <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
                   <X size={24} />
                 </button>
               </div>
@@ -443,12 +444,12 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Audit Type</label>
+                    <label className="text-sm text-[#4B5563] font-bold">Audit Type</label>
                     <select 
                       required
                       value={formData.auditType}
                       onChange={(e) => setFormData({...formData, auditType: e.target.value as any})}
-                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none font-bold text-sm appearance-none cursor-pointer"
+                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm appearance-none cursor-pointer font-normal"
                     >
                       <option value="Quality/InfoSec">InfoSec</option>
                       <option value="Financial">Quality</option>
@@ -457,12 +458,12 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Process Name</label>
+                    <label className="text-sm text-[#4B5563] font-bold">Process Name</label>
                     <select
                       required
                       value={formData.processName}
                       onChange={(e) => setFormData({...formData, processName: e.target.value})}
-                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none font-bold text-sm appearance-none cursor-pointer"
+                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm appearance-none cursor-pointer font-normal"
                     >
                       <option value="">Select Process</option>
                       {PROCESS_OPTIONS.map(opt => (
@@ -474,23 +475,23 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Start Date</label>
+                    <label className="text-sm text-[#4B5563] font-bold">Start Date</label>
                     <input 
                       required
                       type="date" 
                       value={formData.startDate}
                       onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none font-bold text-sm" 
+                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-normal" 
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">End Date</label>
+                    <label className="text-sm text-[#4B5563] font-bold">End Date</label>
                     <input 
                       required
                       type="date" 
                       value={formData.endDate}
                       onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none font-bold text-sm" 
+                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-normal" 
                     />
                   </div>
                 </div>
@@ -511,17 +512,17 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 </div>
 
                 <div>
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Attachment (Scope/Checklist)</label>
+                  <label className="text-sm text-[#4B5563] font-bold">Attachment (Scope/Checklist)</label>
                   <div className="relative group">
                     <input 
                       type="file" 
                       onChange={handleFileChange}
-                      className="hidden" 
+                      className="hidden font-normal" 
                       id="audit-file-upload"
                     />
                     <label 
                       htmlFor="audit-file-upload"
-                      className="flex items-center justify-center gap-3 w-full bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 cursor-pointer group-hover:bg-blue-100/50 group-hover:border-blue-400 transition-all"
+                      className="text-sm text-[#4B5563] font-bold flex items-center justify-center gap-3 w-full bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 cursor-pointer group-hover:bg-blue-100/50 group-hover:border-blue-400 transition-all"
                     >
                       <Paperclip size={20} className="text-blue-500" />
                       <div className="text-left">
@@ -533,8 +534,8 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 </div>
 
                 <div className="flex gap-4 pt-6 border-t border-gray-100">
-                  <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
-                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#00316E] text-white rounded-2xl font-black hover:bg-blue-600 shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                  <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
+                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-600 shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
                     <CheckCircle2 size={20} />
                     {editingId ? 'Save Changes' : 'Create'}
                   </button>
@@ -549,4 +550,11 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
 };
 
 export default AuditPlanning;
+
+
+
+
+
+
+
 
