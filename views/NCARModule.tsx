@@ -321,7 +321,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         {canCreate && (
           <button 
             onClick={() => { setViewingNCAR(null); setFormData(initialFormData); setShowForm(true); }}
-            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm shadow-xl shadow-blue-200 transition-all"
+            className="flex items-center gap-2 bg-[#172554] hover:bg-[#172554] text-white px-6 py-3 rounded-xl font-black text-sm shadow-xl shadow-blue-200 transition-all"
           >
             <Plus size={20} /> NCAR
           </button>
@@ -355,7 +355,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                     type="checkbox" 
                     checked={typeFilters.includes(type)}
                     onChange={() => setTypeFilters(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                    className="w-4 h-4 rounded text-blue-600 font-normal"
+                    className="w-4 h-4 rounded text-[#172554] font-normal"
                   />
                   <span className="text-sm font-bold text-[#4B5563]">{type}</span>
                 </label>
@@ -407,7 +407,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                   return (
                     <tr key={ncar.id} className="hover:bg-blue-50/20 transition-all group">
                       <td className="px-5 py-4">
-                        <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100 whitespace-nowrap">{ncar.id}</span>
+                        <span className="text-sm font-bold text-[#172554] bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100 whitespace-nowrap">{ncar.id}</span>
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-xs font-medium text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded border border-blue-200/60 whitespace-nowrap">
@@ -421,7 +421,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                       </td>
                       <td className="px-5 py-4">
                         <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border whitespace-nowrap ${
-                          ncar.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                          ncar.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-[#172554] border-blue-100'
                         }`}>
                           {ncar.findingType}
                         </span>
@@ -441,12 +441,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="text-sm font-normal text-gray-600 whitespace-nowrap">{new Date(ncar.deadline).toLocaleDateString()}</div>
-                        <div className="text-xs font-medium text-blue-600 uppercase mt-0.5 whitespace-nowrap">{getDaysRemaining(ncar.deadline)} days left</div>
+                        <div className="text-xs font-medium text-[#172554] uppercase mt-0.5 whitespace-nowrap">{getDaysRemaining(ncar.deadline)} days left</div>
                       </td>
                       <td className="px-5 py-4 text-center">
                         <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border whitespace-nowrap ${
                           ncar.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 
-                          ncar.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          ncar.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-[#172554] border-blue-100' :
                           ncar.status === NCARStatus.VALIDATED ? 'bg-green-50 text-blue-700 border-blue-200' :
                           ncar.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : 
                           ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'
@@ -467,7 +467,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                                   className={`p-2 rounded-xl transition-all border ${
                                     isAuditee && (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED)
                                     ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100'
-                                    : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100'
+                                    : 'text-[#172554] bg-blue-50 border-blue-100 hover:bg-blue-100'
                                   }`}
                                   title={tooltipText}
                                   aria-label={tooltipText}
@@ -501,7 +501,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
               <form onSubmit={handleSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
-                    <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 shadow-lg">
+                    <div className="bg-blue-50 p-3 rounded-2xl text-[#172554] shadow-lg">
                       {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? <RefreshCcw size={24} /> : <Eye size={24} />) : viewingNCAR ? <Edit3 size={24} /> : <AlertTriangle size={24} />}
                     </div>
                     <div>
@@ -631,7 +631,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           <label className="text-sm text-[#4B5563] font-bold">Due Date</label>
                           <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
                              <Clock size={10} className="text-blue-500" />
-                             <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">
+                             <span className="text-[9px] font-black text-[#172554] uppercase tracking-tighter">
                                 {getDaysRemaining(formData.dueDate)} Days Left
                              </span>
                           </div>
@@ -692,13 +692,13 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         <button 
                           type="button"
                           onClick={handleApprove}
-                          className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest"
+                          className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-2 text-sm uppercase tracking-widest"
                         >
                           <CheckCircle2 size={18} /> Approve
                         </button>
                       </>
                     ) : !isAuditee ? (
-                      <button type="submit" className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-2 text-sm uppercase tracking-widest">
+                      <button type="submit" className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-2 text-sm uppercase tracking-widest">
                         <Save size={18} /> {viewingNCAR ? 'Update NCAR' : 'Save NCAR'}
                       </button>
                     ) : (
@@ -708,7 +708,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                             <button 
                               type="button"
                               onClick={initiateFreshPlan}
-                              className="px-8 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all flex items-center gap-3 text-sm uppercase tracking-widest"
+                              className="px-8 py-3 bg-white border-2 border-blue-100 text-[#172554] rounded-2xl font-black hover:bg-blue-50 transition-all flex items-center gap-3 text-sm uppercase tracking-widest"
                             >
                               <PlusCircle size={18} /> Create New Plan
                             </button>
@@ -716,7 +716,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           <button 
                             type="button"
                             onClick={() => setIsCreatingActionPlan(true)}
-                            className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm uppercase tracking-widest"
+                            className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-3 text-sm uppercase tracking-widest"
                           >
                             {viewingNCAR.status === NCARStatus.PENDING ? 'Create Action Plan' : 'Edit Previous Plan'} <ArrowRight size={18} />
                           </button>
@@ -730,7 +730,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
               <form onSubmit={handleApSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
-                    <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                    <div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                       <Edit3 size={24} />
                     </div>
                     <div>
@@ -757,7 +757,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                   )}
 
                   <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100">
-                    <div className="flex items-center gap-2 text-blue-600 mb-2 font-black text-xs uppercase tracking-widest">
+                    <div className="flex items-center gap-2 text-[#172554] mb-2 font-black text-xs uppercase tracking-widest">
                       <AlertCircle size={16} /> Non-Conformance Statement
                     </div>
                     <p className="text-sm text-[#4B5563] font-bold leading-relaxed italic">"{viewingNCAR?.statement}"</p>
@@ -814,7 +814,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                             <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest">Target Date</label>
                             <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
                                <Clock size={10} className="text-blue-500" />
-                               <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">
+                               <span className="text-[9px] font-black text-[#172554] uppercase tracking-tighter">
                                   {getDaysRemaining(apFormData.dueDate)} Days
                                </span>
                             </div>
@@ -874,7 +874,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                     </button>
                     <button 
                       type="submit" 
-                      className="px-10 py-3 bg-[#00316E] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-600 flex items-center gap-3 text-sm tracking-widest uppercase"
+                      className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-3 text-sm tracking-widest uppercase"
                     >
                       <Send size={18} /> Submit for Review
                     </button>

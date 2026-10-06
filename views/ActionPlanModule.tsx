@@ -204,7 +204,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         </div>
         {isLead && (
           <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 flex items-center gap-3">
-            <div className="w-3 h-3 bg-[#00316E] rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-[#172554] rounded-full animate-pulse"></div>
             <span className="text-sm font-black text-blue-700 uppercase tracking-wide">{pendingCount} Review(s) Requested</span>
           </div>
         )}
@@ -228,7 +228,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
               onClick={() => setShowFilters(!showFilters)} 
               title="Filter findings by type (Major, Minor, OFI)"
               aria-label="Filter findings by type"
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all border-2 ${typeFilters.length > 0 || showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all border-2 ${typeFilters.length > 0 || showFilters ? 'bg-blue-50 border-blue-200 text-[#172554]' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}
             >
               <Filter size={20} /> Filters
             </button>
@@ -245,7 +245,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
               {['Major', 'Minor', 'OFI'].map(type => (
                 <label key={type} className="text-sm text-[#4B5563] font-medium flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
                   <span className="text-sm font-medium text-[#4B5563]">{type}</span>
-                  <input type="checkbox" className="w-4 h-4 rounded text-blue-600 font-normal" checked={typeFilters.includes(type)} onChange={() => toggleTypeFilter(type)} />
+                  <input type="checkbox" className="w-4 h-4 rounded text-[#172554] font-normal" checked={typeFilters.includes(type)} onChange={() => toggleTypeFilter(type)} />
                 </label>
               ))}
             </div>
@@ -290,12 +290,12 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         const formatted = ap ? ap.id.replace(/^ACT_/, 'ACP__') : '-';
                         return (
                           <>
-                            <td className="px-5 py-4"><span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{n.id}</span></td>
+                            <td className="px-5 py-4"><span className="text-sm font-bold text-[#172554] bg-blue-50 px-2 py-1 rounded border border-blue-100">{n.id}</span></td>
                             <td className="px-5 py-4"><span className="text-sm font-bold text-[#4B5563] bg-gray-50 px-2 py-1 rounded border border-gray-100">{formatted}</span></td>
                           </>
                         );
                       })()}
-                    <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{n.findingType}</span></td>
+                    <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-[#172554] border-blue-100'}`}>{n.findingType}</span></td>
                     <td className="px-5 py-4"><p className="font-normal text-gray-700 text-sm line-clamp-1">{n.requirement}</p></td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
@@ -309,10 +309,10 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                     </td>
                     <td className="px-5 py-4 text-center">
                       <div className="text-sm font-normal text-gray-600">{new Date(n.deadline).toLocaleDateString()}</div>
-                      <div className="text-xs font-medium text-blue-600 uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
+                      <div className="text-xs font-medium text-[#172554] uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                      <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-[#172554] border-blue-100'}`}>
                         {n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Req.' : n.status))}
                       </span>
                     </td>
@@ -339,7 +339,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                               className={`p-3 rounded-2xl transition-all border ${
                                 isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED)
                                 ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100'
-                                : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100'
+                                : 'text-[#172554] bg-blue-50 border-blue-100 hover:bg-blue-100'
                               }`}
                             >
                               {isReadOnly ? <Eye size={20} /> : (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED ? <RefreshCcw size={20} /> : <Edit3 size={20} />)}
@@ -369,7 +369,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
               <>
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                   <div className="flex items-center gap-5">
-                    <div className={`p-4 rounded-2xl text-white shadow-xl ${selectedNCAR.status === NCARStatus.REOPENED || selectedNCAR.status === NCARStatus.REJECTED ? 'bg-red-600' : 'bg-[#00316E]'}`}>
+                    <div className={`p-4 rounded-2xl text-white shadow-xl ${selectedNCAR.status === NCARStatus.REOPENED || selectedNCAR.status === NCARStatus.REJECTED ? 'bg-red-600' : 'bg-[#172554]'}`}>
                       <ClipboardList size={32} />
                     </div>
                     <div>
@@ -401,7 +401,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-blue-600 font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> Audit Finding</div>
+                    <div className="flex items-center gap-3 text-[#172554] font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> Audit Finding</div>
                     <div className="space-y-6">
                       <div><label className="text-m text-[#4B5563] font-bold block mb-2">Statement</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">"{selectedNCAR.statement}"</div></div>
                       <div><label className="text-m text-[#4B5563] font-bold block mb-2">Evidence</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{selectedNCAR.evidence}</div></div>
@@ -426,7 +426,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                               <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Root Cause</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{apFormData.rootCause || 'N/A'}</div></div>
                               <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Corrective Strategy</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{apFormData.actionPlan || 'N/A'}</div></div>
                               {ap && ap.remarks && (
-                                <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-2">Action Plan Attachment</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-normal text-gray-800"><FileUp className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">{ap.remarks}</a></div></div>
+                                <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-2">Action Plan Attachment</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-normal text-gray-800"><FileUp className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-[#172554]">{ap.remarks}</a></div></div>
                               )}
                             </>
                           );
@@ -455,7 +455,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                           </div>
                         </div>
                         <div className="relative group/tooltip inline-block">
-                          <button onClick={handleApprove} title="Approve Action Plan" aria-label="Approve Action Plan" className="flex items-center gap-2 px-12 py-4 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-700 shadow-2xl uppercase text-xs tracking-widest">
+                          <button onClick={handleApprove} title="Approve Action Plan" aria-label="Approve Action Plan" className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
                             <CheckCircle2 size={18} /> Approve
                           </button>
                           <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
@@ -470,7 +470,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                     {isAuditee && (selectedNCAR.status === NCARStatus.REOPENED || selectedNCAR.status === NCARStatus.REJECTED) && (
                       <div className="flex gap-3">
                         <div className="relative group/tooltip inline-block">
-                          <button onClick={initiateFreshPlan} title="Start fresh action plan" aria-label="Create New Plan" className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl font-bold hover:bg-blue-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-blue-50">
+                          <button onClick={initiateFreshPlan} title="Start fresh action plan" aria-label="Create New Plan" className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-blue-100 text-[#172554] rounded-2xl font-bold hover:bg-blue-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-blue-50">
                             <PlusCircle size={20} /> Create New Plan
                           </button>
                           <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
@@ -481,7 +481,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                           </div>
                         </div>
                         <div className="relative group/tooltip inline-block">
-                          <button onClick={() => setIsCreatingActionPlan(true)} title="Modify previously submitted action plan" aria-label="Edit Previous Plan" className="flex items-center gap-3 px-10 py-4 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-700 shadow-2xl uppercase text-xs tracking-widest">
+                          <button onClick={() => setIsCreatingActionPlan(true)} title="Modify previously submitted action plan" aria-label="Edit Previous Plan" className="flex items-center gap-3 px-10 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
                             <RefreshCcw size={20} /> Edit Previous Plan
                           </button>
                           <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
@@ -495,7 +495,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                     )}
                     {isAuditee && selectedNCAR.status === NCARStatus.PENDING && (
                       <div className="relative group/tooltip inline-block">
-                        <button onClick={() => setIsCreatingActionPlan(true)} title="Begin creating action plan" aria-label="Start Action Plan" className="flex items-center gap-3 px-12 py-4 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-700 shadow-2xl uppercase text-xs tracking-widest">
+                        <button onClick={() => setIsCreatingActionPlan(true)} title="Begin creating action plan" aria-label="Start Action Plan" className="flex items-center gap-3 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
                           Start Action Plan <ArrowRight size={20} />
                         </button>
                         <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
@@ -513,7 +513,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
               <form onSubmit={handleSubmitAction} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
                   <div className="flex items-center gap-4">
-                    <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                    <div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                       <Edit3 size={24} />
                     </div>
                     <div>
@@ -538,7 +538,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                 
                 <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                    <div className="bg-blue-50/50 border border-blue-100 rounded-[2rem] p-6 flex items-start gap-4">
-                      <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><AlertCircle size={20} /></div>
+                      <div className="p-2 bg-blue-100 text-[#172554] rounded-xl"><AlertCircle size={20} /></div>
                       <div><span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">NCAR Finding Statement</span><p className="text-sm font-bold text-gray-800 italic leading-relaxed">"{selectedNCAR.statement}"</p></div>
                    </div>
 
@@ -618,7 +618,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                       </div>
                     </div>
                     <div className="relative group/tooltip inline-block">
-                      <button type="submit" title="Submit action plan for auditor review" aria-label="Submit Action Plan" className="flex items-center gap-3 px-10 py-4 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-700 shadow-2xl transition-all uppercase text-xs tracking-wider">
+                      <button type="submit" title="Submit action plan for auditor review" aria-label="Submit Action Plan" className="flex items-center gap-3 px-10 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl transition-all uppercase text-xs tracking-wider">
                         <Send size={18} /> Submit Action Plan
                       </button>
                       <div className="pointer-events-none absolute bottom-full mb-2 right-0 hidden group-hover/tooltip:flex flex-col items-end z-30 transition-all duration-150">
@@ -653,7 +653,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                     <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Root Cause</label><div className="text-sm font-normal text-gray-800">{ap.rootCause || 'N/A'}</div></div>
                     <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Corrective Strategy</label><div className="text-sm font-normal text-gray-800">{ap.correctiveAction || 'N/A'}</div></div>
                     {ap.remarks && (
-                      <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Action Plan Attachment</label><div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-medium text-gray-800"><FileUp className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">{ap.remarks}</a></div></div>
+                      <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Action Plan Attachment</label><div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-medium text-gray-800"><FileUp className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-[#172554]">{ap.remarks}</a></div></div>
                     )}
                   </div>
                 ) : (

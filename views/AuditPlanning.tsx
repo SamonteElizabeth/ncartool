@@ -93,8 +93,8 @@ const MultiSelectDropdown = ({
               onClick={() => toggleOption(option)}
               className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors group"
             >
-              <span className={`text-sm font-bold ${selected.includes(option) ? 'text-blue-600' : 'text-gray-600'}`}>{option}</span>
-              {selected.includes(option) && <Check size={16} className="text-blue-600" />}
+              <span className={`text-sm font-bold ${selected.includes(option) ? 'text-[#172554]' : 'text-gray-600'}`}>{option}</span>
+              {selected.includes(option) && <Check size={16} className="text-[#172554]" />}
             </div>
           ))}
         </div>
@@ -272,7 +272,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
         {isLead && (
           <button 
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-[#00316E] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-blue-200"
+            className="flex items-center gap-2 bg-[#172554] hover:bg-[#172554] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-blue-200"
           >
             <Plus size={20} />
             Create Plan
@@ -352,7 +352,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 filteredPlans.map((plan) => (
                   <tr key={plan.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-5 py-4">
-                      <span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{plan.id}</span>
+                      <span className="text-[12px] font-bold text-[#172554] bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{plan.id}</span>
                     </td>
                     <td className="px-5 py-4 text-center">
                       {plan.attachmentName ? (
@@ -391,7 +391,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     <td className="px-5 py-4">
                       <span className={`text-[11px] font-medium px-3 py-1 rounded-full uppercase border ${
                         plan.status === AuditStatus.DRAFT ? 'bg-gray-50 text-gray-500 border-gray-200' :
-                        plan.status === AuditStatus.PLANNED ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        plan.status === AuditStatus.PLANNED ? 'bg-blue-50 text-[#172554] border-blue-100' :
                         plan.status === AuditStatus.ACTUAL ? 'bg-orange-50 text-orange-600 border-orange-100' : 
                         'bg-green-50 text-green-600 border-green-100'
                       }`}>
@@ -404,7 +404,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                           <div className="relative group/tooltip inline-flex justify-center items-center">
                             <button
                               onClick={() => handleEdit(plan)}
-                              className={`p-2 rounded-xl transition-all border text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100 hover:text-blue-700`}
+                              className={`p-2 rounded-xl transition-all border text-[#172554] bg-blue-50 border-blue-100 hover:bg-blue-100 hover:text-blue-700`}
                               title="Edit Audit Plan"
                               aria-label="Edit Audit Plan"
                             >
@@ -434,7 +434,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
             <form onSubmit={handleSavePlan} className="text-sm text-[#4B5563] font-medium">
               <div className="p-6 flex justify-between items-center border-b border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className="bg-[#00316E] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                  <div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
                     <Calendar size={24} />
                   </div>
                   <div>
@@ -541,7 +541,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
 
                 <div className="flex gap-4 pt-6 border-t border-gray-100">
                   <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
-                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-600 shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#172554] shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
                     <CheckCircle2 size={20} />
                     {editingId ? 'Save Changes' : 'Create'}
                   </button>

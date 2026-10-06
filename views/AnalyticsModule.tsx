@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import { 
   TrendingUp, AlertTriangle, CheckCircle, Clock, Users, Building2, 
@@ -18,7 +18,8 @@ interface AnalyticsModuleProps {
   onNotify: (message: string, type: 'info' | 'success' | 'warning') => void;
 }
 
-const COLORS = ['#00316E', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const COLORS = ['#172554', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const TOOLTIP_STYLE = { borderRadius: 12, borderColor: '#E7E4DC', boxShadow: '0 8px 24px rgba(23,37,84,0.08)', fontSize: 12 };
 
 const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, users, onNotify }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'departments' | 'managers' | 'config'>('summary');
@@ -64,6 +65,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
       };
     });
   }, [filteredNCARs]);
+  const deptChartData = useMemo(() => deptData.filter(dept => dept.NCARs + dept.OFIs > 0), [deptData]);
 
   // Manager Performance Data (Cascading)
   const managerData = useMemo(() => {
@@ -158,35 +160,42 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
     });
   }, [ncars]);
 
+  const recentActivities = useMemo(() => [...filteredNCARs]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5), [filteredNCARs]);
+
   const renderSummary = () => (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
-          { label: 'Total Findings', value: stats.total, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Open NCARs', value: stats.open, icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Overdue (TAT)', value: stats.overdue, icon: Clock, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Total Findings', value: stats.total, note: `${stats.ncarsOnly} NCARs / ${stats.ofis} OFIs`, icon: Activity, color: 'text-[#172554]', bg: 'bg-indigo-50', bar: 'bg-[#172554]' },
+          { label: 'Open NCARs', value: stats.open, note: 'Pending or reopened', icon: AlertTriangle, color: 'text-orange-700', bg: 'bg-orange-50', bar: 'bg-orange-400' },
+          { label: 'Closed', value: stats.closed, note: 'Successfully completed', icon: CheckCircle, color: 'text-emerald-700', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+          { label: 'Overdue', value: stats.overdue, note: `Past ${tatThreshold}-day response target`, icon: Clock, color: 'text-rose-700', bg: 'bg-rose-50', bar: 'bg-rose-500' },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5">
-            <div className={`p-4 ${kpi.bg} rounded-2xl`}>
-              <kpi.icon className={kpi.color} size={24} />
+          <div key={i} className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#E7E4DC] shadow-sm hover:shadow-md transition-shadow">
+            <div className={`absolute inset-x-0 top-0 h-1 ${kpi.bar}`} />
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-500">{kpi.label}</p>
+                <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900">{kpi.value}</p>
+              </div>
+              <div className={`rounded-xl p-2.5 ${kpi.bg}`}><kpi.icon className={kpi.color} size={20} /></div>
             </div>
-            <div>
-              <p className="text-sm font-black text-gray-400 uppercase tracking-widest">{kpi.label}</p>
-              <p className="text-2xl font-black text-gray-800">{kpi.value}</p>
-            </div>
+            <p className="mt-3 text-[11px] text-gray-500">{kpi.note}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Finding Distribution */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Finding Distribution</h3>
-            <PieChartIcon className="text-gray-400" size={20} />
+        <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+          <div className="flex justify-between items-start mb-5">
+            <div><h3 className="text-base font-semibold text-gray-900">Finding distribution</h3><p className="text-xs text-gray-500 mt-1">Breakdown by finding severity</p></div>
+            <div className="p-2 rounded-lg bg-indigo-50 text-[#172554]"><PieChartIcon size={18} /></div>
           </div>
-          <div className="h-[300px]">
+          <div className="relative h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -196,32 +205,38 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                     { name: 'OFI', value: stats.ofis },
                   ]}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  cy="45%"
+                  innerRadius={68}
+                  outerRadius={102}
+                  paddingAngle={4}
                   dataKey="value"
+                  stroke="#fff"
+                  strokeWidth={3}
                 >
-                  {COLORS.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {[0, 1, 2].map(index => (
+                    <Cell key={`cell-${index}`} fill={[COLORS[3], COLORS[0], COLORS[1]][index]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36}/>
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: '#6B7280' }} />
               </PieChart>
             </ResponsiveContainer>
+            <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-[10px] font-medium text-gray-500">Findings</p>
+            </div>
           </div>
         </div>
 
         {/* Compliance Trend */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Compliance Trend</h3>
-            <TrendingUp className="text-gray-400" size={20} />
+        <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+          <div className="flex justify-between items-start mb-5">
+            <div><h3 className="text-base font-semibold text-gray-900">Compliance trend</h3><p className="text-xs text-gray-500 mt-1">Monthly compliance score</p></div>
+            <div className="p-2 rounded-lg bg-indigo-50 text-[#172554]"><TrendingUp size={18} /></div>
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
+              <LineChart
                 data={[
                   { month: 'Sep', compliance: 85 },
                   { month: 'Oct', compliance: 82 },
@@ -231,95 +246,89 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                   { month: 'Feb', compliance: 94 },
                 ]}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} domain={[0, 100]} />
-                <Tooltip />
-                <Area type="monotone" dataKey="compliance" stroke="#00316E" fillOpacity={1} fill="url(#colorComp)" />
-                <defs>
-                  <linearGradient id="colorComp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00316E" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#00316E" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-              </AreaChart>
+                <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#EAE7DF" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#7B8190', fontSize: 11}} dy={8} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#7B8190', fontSize: 11}} domain={[75, 100]} tickFormatter={value => `${value}%`} width={42} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={value => [`${value}%`, 'Compliance']} />
+                <Line type="monotone" dataKey="compliance" name="Compliance" stroke="#172554" strokeWidth={3} dot={{ r: 4, fill: '#172554', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, strokeWidth: 0 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Top 5 Non-compliant Processes */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Top 5 Non-compliant Processes</h3>
-            <Activity className="text-gray-400" size={20} />
+        <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+          <div className="flex justify-between items-start mb-5">
+            <div><h3 className="text-base font-semibold text-gray-900">Top non-compliant processes</h3><p className="text-xs text-gray-500 mt-1">Findings grouped by process</p></div>
+            <div className="p-2 rounded-lg bg-indigo-50 text-[#172554]"><Activity size={18} /></div>
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={processData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} width={120} />
-                <Tooltip cursor={{fill: '#f9fafb'}} />
-                <Legend />
-                <Bar dataKey="Major" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Minor" stackId="a" fill="#00316E" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="OFI" stackId="a" fill="#10b981" radius={[0, 4, 4, 0]} />
+              <BarChart data={processData} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 4 }} barCategoryGap="28%">
+                <CartesianGrid strokeDasharray="3 5" horizontal={false} stroke="#EAE7DF" />
+                <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#7B8190', fontSize: 11}} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#626977', fontSize: 11}} width={120} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{fill: '#F7F6F1'}} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: '#6B7280' }} />
+                <Bar dataKey="Major" stackId="a" name="Major" fill="#E45C62" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Minor" stackId="a" name="Minor" fill="#394D7E" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="OFI" stackId="a" name="OFI" fill="#36A889" radius={[0, 5, 5, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Avg Response TAT by Audit Type */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Avg Response TAT by Audit Type</h3>
-            <Clock className="text-gray-400" size={20} />
+        <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+          <div className="flex justify-between items-start mb-5">
+            <div><h3 className="text-base font-semibold text-gray-900">Average response time</h3><p className="text-xs text-gray-500 mt-1">Days to first response by audit type</p></div>
+            <div className="p-2 rounded-lg bg-violet-50 text-violet-700"><Clock size={18} /></div>
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tatByAuditTypeData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <Tooltip cursor={{fill: '#f9fafb'}} />
-                <Bar dataKey="avgTAT" fill="#8b5cf6" radius={[8, 8, 0, 0]} barSize={40} />
+              <BarChart data={tatByAuditTypeData} layout="vertical" margin={{ top: 8, right: 20, bottom: 8, left: 10 }} barCategoryGap="35%">
+                <CartesianGrid strokeDasharray="3 5" horizontal={false} stroke="#EAE7DF" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#7B8190', fontSize: 11}} tickFormatter={value => `${value}d`} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#626977', fontSize: 11}} width={112} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{fill: '#F7F6F1'}} formatter={value => [`${value} days`, 'Average response']} />
+                <Bar dataKey="avgTAT" name="Average response" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                  {tatByAuditTypeData.map((entry, index) => <Cell key={entry.name} fill={[COLORS[0], '#8270B3', '#43A38D'][index]} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Recent Compliance Activities</h3>
-            <Activity className="text-gray-400" size={20} />
+        <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm lg:col-span-2">
+          <div className="flex justify-between items-start mb-5">
+            <div><h3 className="text-base font-semibold text-gray-900">Recent compliance activity</h3><p className="text-xs text-gray-500 mt-1">Latest findings in the selected audit type</p></div>
+            <div className="p-2 rounded-lg bg-indigo-50 text-[#172554]"><Activity size={18} /></div>
           </div>
           <div className="space-y-6">
-            {ncars.slice(0, 5).map((ncar, i) => (
+            {recentActivities.map((ncar, i) => (
               <div key={i} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${ncar.status === NCARStatus.CLOSED ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                  <div className={`p-3 rounded-xl ${ncar.status === NCARStatus.CLOSED ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-[#172554]'}`}>
                     {ncar.status === NCARStatus.CLOSED ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
                   </div>
                   <div>
-                    <p className="text-sm font-normal text-gray-800">{ncar.statement.substring(0, 60)}...</p>
+                    <p className="text-sm font-medium text-gray-800">{ncar.statement.length > 90 ? `${ncar.statement.substring(0, 90)}...` : ncar.statement}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm font-bold text-blue-500 uppercase tracking-widest">{ncar.id}</span>
-                      <span className="text-sm font-bold text-gray-400">•</span>
-                      <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{ncar.area}</span>
+                      <span className="text-xs font-semibold text-[#172554]">{ncar.id}</span>
+                      <span className="text-xs text-gray-300">/</span>
+                      <span className="text-xs font-medium text-gray-500">{ncar.area}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-800 capitalize">{ncar.status.toLowerCase().replace('_', ' ')}</p>
-                  <p className="text-sm font-bold text-gray-400 mt-1">{new Date(ncar.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs font-semibold text-gray-700 capitalize">{ncar.status.toLowerCase().replace('_', ' ')}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{new Date(ncar.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full mt-8 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-2xl transition-all uppercase tracking-widest">
-            View All Activities
-          </button>
+          {recentActivities.length === 0 && <p className="py-10 text-center text-sm text-gray-500">No activity for this audit type yet.</p>}
         </div>
       </div>
     </div>
@@ -327,38 +336,40 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
 
   const renderDepartments = () => (
     <div className="space-y-5 animate-in fade-in duration-500">
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight mb-8">Departmental Performance Comparison</h3>
+      <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+        <h3 className="text-base font-semibold text-gray-900">Department performance</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-6">Compare NCAR and opportunity findings by department.</p>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={deptData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-              <Tooltip cursor={{fill: '#f9fafb'}} />
-              <Legend />
-              <Bar dataKey="NCARs" fill="#00316E" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="OFIs" fill="#10b981" radius={[4, 4, 0, 0]} />
+            <BarChart data={deptChartData} margin={{ top: 12, right: 12, left: -12, bottom: 4 }} barGap={5}>
+              <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#EAE7DF" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#626977', fontSize: 11}} dy={8} />
+              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#7B8190', fontSize: 11}} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{fill: '#F7F6F1'}} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: '#6B7280' }} />
+              <Bar dataKey="NCARs" fill="#394D7E" radius={[5, 5, 0, 0]} maxBarSize={34} />
+              <Bar dataKey="OFIs" fill="#43A38D" radius={[5, 5, 0, 0]} maxBarSize={34} />
+              {deptChartData.length === 0 && <text x="50%" y="50%" textAnchor="middle" fill="#7B8190" fontSize="13">No department findings for this audit type</text>}
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[#E7E4DC] shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
-              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Department</th>
-              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Total NCARs</th>
-              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Total OFIs</th>
-              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Closure Rate</th>
+            <tr className="bg-[#F7F6F1] text-gray-600 border-b border-[#E7E4DC]">
+              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider">Department</th>
+              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider">Total NCARs</th>
+              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider">Total OFIs</th>
+              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider">Closure Rate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-[#4B5563]">
             {deptData.map((dept, i) => (
-              <tr key={i} className="hover:bg-blue-50/30 transition-colors">
+              <tr key={i} className="hover:bg-[#F7F6F1] transition-colors">
                 <td className="px-5 py-4 font-semibold text-gray-800">{dept.name}</td>
-                <td className="px-5 py-4 font-normal text-blue-600">{dept.NCARs}</td>
+                <td className="px-5 py-4 font-normal text-[#172554]">{dept.NCARs}</td>
                 <td className="px-5 py-4 font-normal text-emerald-600">{dept.OFIs}</td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -386,12 +397,12 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
       {/* Cascading KPI Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {deptHeadData.map((head, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div key={i} className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Department Head</p>
                 <h3 className="text-xl font-black text-gray-800">{head.name}</h3>
-                <p className="text-sm font-bold text-blue-600">{head.dept}</p>
+                <p className="text-sm font-bold text-[#172554]">{head.dept}</p>
               </div>
               <div className={`px-4 py-2 rounded-2xl font-black text-lg ${head.avgManagerScore >= 90 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
                 {head.avgManagerScore}%
@@ -416,15 +427,36 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         ))}
       </div>
 
+      <div className="bg-white p-6 rounded-2xl border border-[#E7E4DC] shadow-sm">
+        <div className="mb-5">
+          <h3 className="text-base font-semibold text-gray-900">Manager KPI scores</h3>
+          <p className="mt-1 text-xs text-gray-500">Compare current performance scores across managers.</p>
+        </div>
+        {managerData.length ? <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={managerData} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: 8 }} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 5" horizontal={false} stroke="#EAE7DF" />
+              <XAxis type="number" domain={[0, 100]} tickFormatter={value => `${value}%`} axisLine={false} tickLine={false} tick={{ fill: '#7B8190', fontSize: 11 }} />
+              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#626977', fontSize: 11 }} width={125} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} formatter={value => [`${value}%`, 'KPI score']} cursor={{ fill: '#F7F6F1' }} />
+              <Bar dataKey="score" name="KPI score" radius={[0, 6, 6, 0]} maxBarSize={24}>
+                {managerData.map(manager => <Cell key={manager.id} fill={manager.score >= 90 ? '#43A38D' : manager.score >= 70 ? '#D59A42' : '#E45C62'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div> : <p className="py-10 text-center text-sm text-gray-500">No manager performance data available.</p>}
+      </div>
+
       {/* Manager Detailed Table */}
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-blue-100 bg-blue-50/40">
-          <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Manager Performance Index</h3>
+      <div className="bg-white rounded-2xl border border-[#E7E4DC] shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-[#E7E4DC] bg-[#F7F6F1]">
+          <h3 className="text-base font-semibold text-gray-900">Manager performance index</h3>
+          <p className="mt-1 text-xs text-gray-500">Response time, escalations, and corrective action timeliness.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+              <tr className="bg-white text-gray-500 border-b border-[#E7E4DC]">
                 <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Manager</th>
                 <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">NCARs</th>
                 <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Escalated</th>
@@ -480,7 +512,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
     <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-500">
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+          <div className="p-3 bg-blue-50 rounded-2xl text-[#172554]">
             <Settings size={24} />
           </div>
           <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Analytics Configuration</h3>
@@ -490,7 +522,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label className="text-sm text-[#4B5563] font-bold uppercase tracking-widest">Response TAT Threshold (Working Days)</label>
-              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-black">{tatThreshold} Days</span>
+              <span className="bg-blue-50 text-[#172554] px-3 py-1 rounded-lg font-black">{tatThreshold} Days</span>
             </div>
             <input 
               type="range" min="1" max="15" step="1" 
@@ -506,7 +538,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               onClick={() => {
                 onNotify('Configuration saved successfully.', 'success');
               }}
-              className="w-full bg-[#00316E] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all uppercase tracking-widest"
+              className="w-full bg-[#172554] text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-[#1E3268] transition-all uppercase tracking-widest"
             >
               Save Configuration
             </button>
@@ -521,16 +553,17 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
          <div>
-          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Analytics</h3>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Analytics</h1>
+          <p className="mt-1 text-sm text-gray-500">Monitor findings, response times, and performance across your audits.</p>
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm">
-            <Filter size={18} className="text-gray-400" />
+          <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-[#E7E4DC] shadow-sm">
+            <Filter size={16} className="text-gray-500" />
             <select 
               value={selectedAuditType} 
               onChange={(e) => setSelectedAuditType(e.target.value as any)}
-              className="bg-transparent border-none text-l text-[#4B5563] outline-none cursor-pointer appearance-none pr-8 font-normal"
+              className="bg-transparent border-none text-sm text-gray-700 outline-none cursor-pointer appearance-none pr-8 font-medium"
             >
               <option value="All">All Audit Types</option>
               <option value="Quality/InfoSec">Quality/InfoSec</option>
@@ -538,14 +571,14 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               <option value="Special Request">Special Request</option>
             </select>
           </div>
-          <button className="p-3 bg-white text-gray-400 hover:text-blue-600 rounded-2xl border border-gray-100 shadow-sm transition-all">
+          <button aria-label="Download analytics" title="Download analytics" className="p-3 bg-white text-gray-500 hover:text-[#172554] rounded-xl border border-[#E7E4DC] shadow-sm transition-all">
             <Download size={20} />
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1.5 bg-gray-100 rounded-[2rem] w-fit">
+      <div className="flex max-w-full gap-1 overflow-x-auto p-1.5 bg-white border border-[#E7E4DC] rounded-xl w-fit shadow-sm">
         {[
           { id: 'summary', label: 'Summary', icon: BarChart3 },
           { id: 'departments', label: 'Departments', icon: Building2 },
@@ -555,10 +588,10 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2.5 px-6 py-3 rounded-[1.5rem] text-l font-bold transition-all ${
+            className={`flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
               activeTab === tab.id 
-                ? 'bg-white text-blue-600 shadow-md' 
-                : 'text-gray-500 hover:text-[#4B5563]'
+                ? 'bg-[#172554] text-white shadow-sm'
+                : 'text-gray-500 hover:bg-[#F5F4F0] hover:text-gray-800'
             }`}
           >
             <tab.icon size={18} />

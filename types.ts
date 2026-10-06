@@ -1,5 +1,5 @@
 
-export type Role = 'LEAD_AUDITOR' | 'AUDITOR' | 'AUDITEE' | 'DEV_ADMIN';
+export type Role = 'LEAD_AUDITOR' | 'AUDITOR' | 'AUDITEE' | 'GUEST' | 'DEV_ADMIN';
 
 export type AuditType = 'Quality/InfoSec' | 'Financial' | 'Special Request';
 
@@ -77,6 +77,7 @@ export interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning';
   timestamp: string;
+  read?: boolean;
 }
 
 export interface User {

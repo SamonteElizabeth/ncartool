@@ -67,7 +67,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center gap-4 mb-6">
           <div className="p-3 bg-blue-50 rounded-2xl">
-            <FileText className="text-blue-600" size={32} />
+            <FileText className="text-[#172554]" size={32} />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800 tracking-tight">User Manual</h1>
@@ -94,7 +94,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                   accept=".pdf,.doc,.docx"
                 />
                 <div className="p-6 bg-blue-100 rounded-full mb-6">
-                  <Upload className="text-blue-600" size={48} />
+                  <Upload className="text-[#172554]" size={48} />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Upload User Manual</h3>
                 <p className="text-gray-500 text-center max-w-xs">
@@ -107,10 +107,10 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
               <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-4 bg-white rounded-2xl shadow-sm">
-                    <FileText className="text-blue-600" size={40} />
+                    <FileText className="text-[#172554]" size={40} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800">{userManualFile.name}</h3>
+                    <a href={userManualFile.url} target="_blank" rel="noopener noreferrer" className="text-xl font-bold text-gray-800 hover:text-[#172554] hover:underline">{userManualFile.name}</a>
                     <p className="text-sm text-gray-500 font-medium">Uploaded on {userManualFile.uploadedAt}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <CheckCircle size={16} className="text-green-500" />
@@ -122,7 +122,7 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
                   <a 
                     href={userManualFile.url} 
                     download={userManualFile.name}
-                    className="p-4 bg-white text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2 font-bold"
+                    className="p-4 bg-white text-[#172554] rounded-2xl hover:bg-[#172554] hover:text-white transition-all shadow-sm flex items-center gap-2 font-bold"
                   >
                     <Download size={20} />
                     Download
@@ -154,17 +154,17 @@ const UserManualModule: React.FC<UserManualModuleProps> = ({
               <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="p-4 bg-blue-50 rounded-2xl">
-                    <FileText className="text-blue-600" size={40} />
+                    <FileText className="text-[#172554]" size={40} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800">{userManualFile.name}</h3>
+                    <a href={userManualFile.url} target="_blank" rel="noopener noreferrer" className="text-xl font-bold text-gray-800 hover:text-[#172554] hover:underline">{userManualFile.name}</a>
                     <p className="text-sm text-gray-500 font-medium">Version updated: {userManualFile.uploadedAt}</p>
                   </div>
                 </div>
                 <a 
                   href={userManualFile.url} 
                   download={userManualFile.name}
-                  className="w-full md:w-auto px-8 py-4 bg-[#00316E] text-white rounded-2xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg"
+                  className="w-full md:w-auto px-8 py-4 bg-[#172554] text-white rounded-2xl hover:bg-[#1E3268] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg"
                 >
                   <Download size={24} />
                   Download Manual

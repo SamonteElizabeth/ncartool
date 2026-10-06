@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { UserPlus, Users, Mail, Building2, Shield, Trash2, Search, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Building2, Shield, Trash2, Search, Pencil, X } from 'lucide-react';
 import { User, Role } from '../types';
 
 interface UserManagementProps {
@@ -10,27 +10,18 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNotify }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    dept: '',
-    role: 'AUDITEE' as Role,
-    designation: 'Staff' as User['designation'],
-    reportsTo: ''
-  });
+  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const departments = useMemo(() => [...new Set(users.map(user => user.dept).filter(Boolean))].sort(), [users]);
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleEditUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newUser
-    };
-    setUsers(prev => [...prev, user]);
-    setIsModalOpen(false);
-    setNewUser({ name: '', email: '', dept: '', role: 'AUDITEE', designation: 'Staff', reportsTo: '' });
-    onNotify(`User ${user.name} added successfully.`, 'success');
+    if (!editingUser) return;
+    setUsers(prev => prev.map(user => user.id === editingUser.id ? editingUser : user));
+    onNotify(`User ${editingUser.name} updated successfully.`, 'success');
+    setEditingUser(null);
   };
 
   const handleDeleteUser = (id: string) => {
@@ -43,10 +34,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
     onNotify('User deleted successfully.', 'info');
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredUsers = users.filter(u =>
+    (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.dept.toLowerCase().includes(searchTerm.toLowerCase())
+    u.dept.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (!roleFilter || u.role === roleFilter) &&
+    (!departmentFilter || u.dept === departmentFilter)
   );
 
   return (
@@ -55,17 +48,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
         <div>
           <h1 className="text-3xl font-black text-gray-800 tracking-tight">USER MANAGEMENT</h1>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-[#00316E] text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all"
-        >
-          <UserPlus size={20} />
-          Add New User
-        </button>
+        <p className="text-sm text-gray-500">Users are provisioned through SSO. Manage access and profile details here.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex items-center gap-4">
+        <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex flex-wrap items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input 
@@ -76,6 +63,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
               className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-normal"
             />
           </div>
+          <select aria-label="Filter by role" value={roleFilter} onChange={e => setRoleFilter(e.target.value as Role | '')} className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm">
+            <option value="">All roles</option>
+            <option value="DEV_ADMIN">Dev Admin</option><option value="LEAD_AUDITOR">Lead Auditor</option>
+            <option value="AUDITOR">Auditor</option><option value="AUDITEE">Auditee</option><option value="GUEST">Guest</option>
+          </select>
+          <select aria-label="Filter by department" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm">
+            <option value="">All departments</option>{departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -93,7 +88,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#00316E] font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#172554] font-semibold">
                         {user.name.charAt(0)}
                       </div>
                       <div>
@@ -120,6 +115,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
+                    <div className="inline-flex items-center gap-1">
+                    <button onClick={() => setEditingUser({ ...user })} className="p-2 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all" title="Edit User" aria-label={`Edit ${user.name}`}><Pencil size={18} /></button>
                     {user.role !== 'DEV_ADMIN' && (
                       <div className="relative group/tooltip inline-flex justify-center items-center">
                         <button 
@@ -137,7 +134,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                           <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1 mr-3"></span>
                         </div>
                       </div>
-                    )}
+                    )}</div>
                   </td>
                 </tr>
               ))}
@@ -146,55 +143,55 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
         </div>
       </div>
 
-      {isModalOpen && (
+      {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Add New User</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+              <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Edit User</h2>
+              <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddUser} className="p-6 space-y-4 text-sm text-[#4B5563] font-medium">
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Full Name</label>
+            <form onSubmit={handleEditUser} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm text-[#4B5563] font-medium">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Full Name <span className="text-red-500">*</span></label>
                 <input 
                   required
                   type="text"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({...editingUser, name: e.target.value})}
+                  className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-normal text-gray-800"
                   placeholder="e.g. John Smith"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Email Address</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Email Address <span className="text-red-500">*</span></label>
                 <input 
                   required
                   type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                  className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-normal text-gray-800"
                   placeholder="john@example.com"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Department</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Department <span className="text-red-500">*</span></label>
                 <input 
                   required
                   type="text"
-                  value={newUser.dept}
-                  onChange={(e) => setNewUser({...newUser, dept: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-normal"
+                  value={editingUser.dept}
+                  onChange={(e) => setEditingUser({...editingUser, dept: e.target.value})}
+                  className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-normal text-gray-800"
                   placeholder="e.g. Quality Assurance"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Designation</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Designation <span className="text-red-500">*</span></label>
                 <select 
-                  value={newUser.designation}
-                  onChange={(e) => setNewUser({...newUser, designation: e.target.value as any})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
+                  value={editingUser.designation}
+                  onChange={(e) => setEditingUser({...editingUser, designation: e.target.value as User['designation']})}
+                  className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none font-normal text-gray-800"
                 >
                   <option value="Staff">Staff</option>
                   <option value="Supervisor">Supervisor</option>
@@ -203,36 +200,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                   <option value="Department Head">Department Head</option>
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">Reports To (Superior ID)</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">System Role <span className="text-red-500">*</span></label>
                 <select 
-                  value={newUser.reportsTo}
-                  onChange={(e) => setNewUser({...newUser, reportsTo: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
+                  value={editingUser.role}
+                  onChange={(e) => setEditingUser({...editingUser, role: e.target.value as Role})}
+                  className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none font-normal text-gray-800"
                 >
-                  <option value="">None</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.designation})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-[#4B5563] font-bold text-xs uppercase tracking-widest">System Role</label>
-                <select 
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value as Role})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-normal"
-                >
+                  <option value="DEV_ADMIN">Dev Admin</option>
                   <option value="LEAD_AUDITOR">Lead Auditor</option>
                   <option value="AUDITOR">Auditor</option>
                   <option value="AUDITEE">Auditee</option>
+                  <option value="GUEST">Guest</option>
                 </select>
               </div>
               <button 
                 type="submit"
-                className="w-full bg-[#00316E] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all mt-6"
+                className="sm:col-span-2 w-full bg-[#172554] text-white py-3 rounded-lg font-semibold shadow-sm hover:bg-[#1E3268] transition-all mt-2"
               >
-                Create User Account
+                Save Changes
               </button>
             </form>
           </div>

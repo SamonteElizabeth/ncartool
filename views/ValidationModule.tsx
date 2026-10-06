@@ -203,7 +203,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
           <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Validation</h3>
         </div>
         <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 flex items-center gap-3">
-          <div className="w-3 h-3 bg-[#00316E] rounded-full animate-pulse"></div>
+          <div className="w-3 h-3 bg-[#172554] rounded-full animate-pulse"></div>
           <span className="text-sm font-black text-blue-700 uppercase tracking-wide">{pendingCount} Review(s) Requested</span>
         </div>
       </div>
@@ -220,7 +220,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
           />
         </div>
         <div className="flex gap-3 relative" ref={filterRef}>
-          <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all border-2 ${typeFilters.length > 0 || showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}>
+          <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all border-2 ${typeFilters.length > 0 || showFilters ? 'bg-blue-50 border-blue-200 text-[#172554]' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}>
             <Filter size={20} /> Filters
           </button>
           {showFilters && (
@@ -229,7 +229,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
               {['Major', 'Minor', 'OFI'].map(type => (
                 <label key={type} className="text-sm text-[#4B5563] font-bold flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                   <span className="text-sm font-bold text-[#4B5563]">{type}</span>
-                  <input type="checkbox" checked={typeFilters.includes(type)} onChange={() => toggleTypeFilter(type)} className="w-4 h-4 rounded text-blue-600 font-normal" />
+                  <input type="checkbox" checked={typeFilters.includes(type)} onChange={() => toggleTypeFilter(type)} className="w-4 h-4 rounded text-[#172554] font-normal" />
                 </label>
               ))}
             </div>
@@ -267,18 +267,18 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                       const ap = actionPlans.find(a => a.ncarId === n.id);
                       return (
                         <>
-                          <td className="px-5 py-4"><span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{n.id}</span></td>
+                          <td className="px-5 py-4"><span className="text-sm font-bold text-[#172554] bg-blue-50 px-2 py-1 rounded border border-blue-100">{n.id}</span></td>
                           <td className="px-5 py-4"><span className="text-sm font-bold text-[#4B5563] bg-gray-50 px-2 py-1 rounded border border-gray-100">{ap ? ap.id : '-'}</span></td>
                         </>
                       );
                     })()}
-                    <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{n.findingType}</span></td>
+                    <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-[#172554] border-blue-100'}`}>{n.findingType}</span></td>
                     <td className="px-5 py-4 font-normal text-gray-700 text-sm line-clamp-1">{n.requirement}</td>
                     <td className="px-5 py-4 text-center">
                       <div className="text-sm font-normal text-gray-600">{new Date(n.deadline).toLocaleDateString()}</div>
-                      <div className="text-xs font-medium text-blue-600 uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
+                      <div className="text-xs font-medium text-[#172554] uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
                     </td>
-                    <td className="px-5 py-4 text-center"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Required' : n.status))}</span></td>
+                    <td className="px-5 py-4 text-center"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-[#172554] border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Required' : n.status))}</span></td>
                     <td className="px-5 py-4 text-center">
                       {(() => {
                         const tooltipText = isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) 
@@ -290,7 +290,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                               onClick={() => setViewingNCARId(n.id)} 
                               title={tooltipText}
                               aria-label={tooltipText}
-                              className={`p-3 rounded-2xl transition-all border ${isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-600 hover:text-white'}`}
+                              className={`p-3 rounded-2xl transition-all border ${isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' : 'text-[#172554] bg-blue-50 border-blue-100 hover:bg-[#172554] hover:text-white'}`}
                             >
                               {isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? <RefreshCcw size={20} /> : <Eye size={20} />}
                             </button>
@@ -324,7 +324,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                 <>
                   <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div className="flex items-center gap-5">
-                      <div className={`p-4 rounded-2xl text-white shadow-xl ${isCreatingActionPlan ? 'bg-[#00316E]' : (n.status === NCARStatus.REOPENED ? 'bg-red-600' : 'bg-[#00316E]')}`}>
+                      <div className={`p-4 rounded-2xl text-white shadow-xl ${isCreatingActionPlan ? 'bg-[#172554]' : (n.status === NCARStatus.REOPENED ? 'bg-red-600' : 'bg-[#172554]')}`}>
                         {isCreatingActionPlan ? <RefreshCcw size={32} /> : <ShieldCheck size={32} />}
                       </div>
                       <div>
@@ -348,7 +348,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                               </div>
                             </div>
                           )}
-                          <div className="flex items-center gap-3 text-blue-600 font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> Audit Finding</div>
+                          <div className="flex items-center gap-3 text-[#172554] font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> Audit Finding</div>
                           <div className="space-y-6">
                             <div><label className="text-sm text-[#4B5563] font-bold mb-2">Statement</label><div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-base text-[#4B5563] outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">"{n.statement}"</div></div>
                             <div className="grid grid-cols-2 gap-4">
@@ -380,7 +380,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                                   <div className="flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100"><label className="text-sm text-[#4B5563] font-bold text-sm block mb-1">Date</label><div className="flex items-center gap-2 text-s font-normal text-gray-800"><Calendar size={14} className="text-blue-500" /> {apFormData.dueDate}</div></div>
                                 </div>
                                 {ap.remarks && (
-                                  <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-2">Action Plan Attachment</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-normal text-gray-800"><FileIcon className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">{ap.remarks}</a></div></div>
+                                  <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-2">Action Plan Attachment</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-normal text-gray-800"><FileIcon className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-[#172554]">{ap.remarks}</a></div></div>
                                 )}
                               </>
                             ) : (
@@ -394,12 +394,12 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                         <div className="text-xs font-bold text-gray-400">Audit Ref: <span className="text-blue-500 font-black">{n.auditPlanId}</span></div>
                         <div className="flex gap-4">
                           {isLead && n.status === NCARStatus.FOR_APPROVAL && (
-                            <><button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50"><XCircle size={18} />Reject</button><button onClick={() => handleApprove(n.id)} className="flex items-center gap-2 px-12 py-4 bg-[#00316E] text-white rounded-2xl font-bold hover:bg-blue-700 shadow-2xl uppercase text-xs tracking-widest"><CheckCircle2 size={18} />Approve</button></>
+                            <><button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50"><XCircle size={18} />Reject</button><button onClick={() => handleApprove(n.id)} className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest"><CheckCircle2 size={18} />Approve</button></>
                           )}
                           {isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) && (
                             <div className="flex gap-4">
-                              <button onClick={initiateFreshPlan} className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-blue-50"><PlusCircle size={20} /> Create New Plan</button>
-                              <button onClick={() => setIsCreatingActionPlan(true)} className="flex items-center gap-3 px-10 py-4 bg-[#00316E] text-white rounded-2xl font-black hover:bg-blue-700 shadow-2xl uppercase text-xs tracking-widest"><RefreshCcw size={20} /> Edit Previous Plan</button>
+                              <button onClick={initiateFreshPlan} className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-blue-100 text-[#172554] rounded-2xl font-black hover:bg-blue-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-blue-50"><PlusCircle size={20} /> Create New Plan</button>
+                              <button onClick={() => setIsCreatingActionPlan(true)} className="flex items-center gap-3 px-10 py-4 bg-[#172554] text-white rounded-2xl font-black hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest"><RefreshCcw size={20} /> Edit Previous Plan</button>
                             </div>
                           )}
                         </div>
@@ -409,7 +409,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                     <form onSubmit={handleAuditeeSubmit} className="text-sm text-[#4B5563] font-medium">
                       <div className="p-10 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
                          <div className="bg-blue-50/50 border border-blue-100 rounded-[2rem] p-6 flex items-start gap-4">
-                            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><AlertCircle size={20} /></div>
+                            <div className="p-2 bg-blue-100 text-[#172554] rounded-xl"><AlertCircle size={20} /></div>
                             <div><span className="text-sm font-black text-blue-400 uppercase block mb-1">NCAR Finding Statement</span><p className="text-sm font-bold text-gray-800 italic leading-relaxed">"{n.statement}"</p></div>
                          </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -432,7 +432,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                         <button type="button" onClick={() => setApFormData(initialApFormData)} className="flex items-center gap-2 px-6 py-4 bg-white border-2 border-gray-100 text-gray-400 hover:text-red-600 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"><Eraser size={18} /> Reset Form</button>
                         <div className="flex gap-4">
                           <button type="button" onClick={() => setIsCreatingActionPlan(false)} className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest shadow-sm"><Undo2 size={18} /> Back</button>
-                          <button type="submit" className="flex items-center gap-3 px-10 py-4 bg-[#00316E] text-white rounded-2xl font-black hover:bg-blue-700 shadow-2xl transition-all uppercase text-[10px] tracking-widest"><Send size={18} /> Resubmit for Validation</button>
+                          <button type="submit" className="flex items-center gap-3 px-10 py-4 bg-[#172554] text-white rounded-2xl font-black hover:bg-[#1E3268] shadow-2xl transition-all uppercase text-[10px] tracking-widest"><Send size={18} /> Resubmit for Validation</button>
                         </div>
                       </div>
                     </form>
@@ -462,7 +462,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                     <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Root Cause</label><div className="text-sm font-bold text-gray-800">{ap.rootCause || 'N/A'}</div></div>
                     <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Corrective Strategy</label><div className="text-sm font-bold text-gray-800">{ap.correctiveAction || 'N/A'}</div></div>
                     {ap.remarks && (
-                      <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Action Plan Attachment</label><div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-bold text-gray-800"><FileIcon className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">{ap.remarks}</a></div></div>
+                      <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-1">Action Plan Attachment</label><div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-bold text-gray-800"><FileIcon className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-[#172554]">{ap.remarks}</a></div></div>
                     )}
                   </div>
                 ) : (
