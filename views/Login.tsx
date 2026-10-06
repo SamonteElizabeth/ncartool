@@ -58,14 +58,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             {/* Right Column: Clean Login Form */}
             <div className="p-8 sm:p-10 lg:p-14 flex flex-col justify-center bg-white">
               
-              {/* Logo Header */}
-              <div className="mb-8">
-                <img
-                  src="/assets/ncartool_logo.png"
-                  alt="NCARTool"
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+                          {/* Logo Header */}
+<div className="flex items-center justify-center gap-3.5 mb-8">
+  <div className="w-12 h-12 flex items-center justify-center shrink-0">
+    <img
+      src="/assets/ncarlogo.png"
+      alt="NCAR Logo"
+      className="w-full h-full object-contain"
+    />
+  </div>
+
+  <div className="text-3xl font-semibold tracking-[0.02em]">
+    <span className="bg-gradient-to-r from-[#0057E7] to-[#2563EB] bg-clip-text text-transparent">
+      NCAR
+    </span>
+    <span className="bg-gradient-to-r from-[#0EA5E9] to-[#22D3EE] bg-clip-text text-transparent">
+      Tool
+    </span>
+  </div>
+</div>
+
 
               {/* Title & Prompt */}
               <div className="mb-8">
