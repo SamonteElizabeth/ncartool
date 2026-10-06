@@ -243,23 +243,23 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-                <tr className="bg-[#00316E] text-white">
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">NCAR ID</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">ACP ID</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Finding Type</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Requirement</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Deadline</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Status</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Action</th>
+              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">NCAR ID</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">ACP ID</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Finding Type</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Requirement</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Deadline</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Status</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredItems.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-bold uppercase tracking-widest italic opacity-60">No items found</td></tr>
+                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-medium text-sm">No items found</td></tr>
               ) : (
                 filteredItems.map(n => (
                   <tr key={n.id} className="hover:bg-blue-50/20 transition-all group">
@@ -272,14 +272,38 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                         </>
                       );
                     })()}
-                    <td className="px-5 py-4"><span className={`text-sm font-bold px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{n.findingType}</span></td>
-                    <td className="px-5 py-4 font-bold text-[#4B5563] text-sm line-clamp-1">{n.requirement}</td>
-                      <td className="px-5 py-4 text-center">
-                      <div className="text-sm font-bold text-[#4B5563]">{new Date(n.deadline).toLocaleDateString()}</div>
-                      <div className="text-sm font-bold text-blue-500 uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
+                    <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{n.findingType}</span></td>
+                    <td className="px-5 py-4 font-normal text-gray-700 text-sm line-clamp-1">{n.requirement}</td>
+                    <td className="px-5 py-4 text-center">
+                      <div className="text-sm font-normal text-gray-600">{new Date(n.deadline).toLocaleDateString()}</div>
+                      <div className="text-xs font-medium text-blue-600 uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
                     </td>
-                    <td className="px-5 py-4 text-center"><span className={`text-sm font-bold px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Required' : n.status))}</span></td>
-                    <td className="px-5 py-4 text-center"><button onClick={() => setViewingNCARId(n.id)} className={`p-3 rounded-2xl transition-all border ${isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-600 hover:text-white'}`}>{isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? <RefreshCcw size={20} /> : <Eye size={20} />}</button></td>
+                    <td className="px-5 py-4 text-center"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Required' : n.status))}</span></td>
+                    <td className="px-5 py-4 text-center">
+                      {(() => {
+                        const tooltipText = isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) 
+                          ? "Revise Action Plan" 
+                          : "View Validation Details";
+                        return (
+                          <div className="relative group/tooltip inline-flex justify-center items-center">
+                            <button 
+                              onClick={() => setViewingNCARId(n.id)} 
+                              title={tooltipText}
+                              aria-label={tooltipText}
+                              className={`p-3 rounded-2xl transition-all border ${isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-600 hover:text-white'}`}
+                            >
+                              {isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) ? <RefreshCcw size={20} /> : <Eye size={20} />}
+                            </button>
+                            <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
+                              <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
+                                {tooltipText}
+                              </span>
+                              <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 ))
               )}

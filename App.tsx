@@ -174,20 +174,20 @@ const App: React.FC = () => {
     }
   };
 
-  // Use exact logo file from public assets.
+  // System logo from assets folder (ncarlogo.png) placed in center of sidebar
   const Logo = ({ collapsed }: { collapsed: boolean }) => (
-    <div
-      className={`flex items-center justify-center overflow-hidden mx-auto ${
-        collapsed ? 'w-14 h-14' : 'w-64 h-20'
-      }`}
-    >
-      <img
-        src="/assets/ncar2.png"
-        className={`transition-all duration-200 ${
-          collapsed ? 'w-full h-full object-cover scale-[1.25]' : 'w-full h-full object-cover scale-[1.20]'
-        }`}
-        style={{ objectPosition: '50% 50%' }}
-      />
+    <div className="flex items-center justify-center w-full">
+      <div
+        className={`${
+          collapsed ? 'w-11 h-11' : 'w-20 h-20'
+        } flex items-center justify-center transition-all duration-300`}
+      >
+        <img
+          src="/assets/ncarlogo.png"
+          alt="NCAR Logo"
+          className="w-full h-full object-contain drop-shadow-md hover:scale-105 transition-transform"
+        />
+      </div>
     </div>
   );
 
@@ -198,40 +198,66 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden text-base">
       {/* Sidebar - solid blue (#00316E) */}
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#00316E] transition-all duration-300 flex flex-col h-full z-30 shadow-2xl [font-family:'Poppins',sans-serif]`}>
-        <div className="px-4 pt-5 pb-4 flex flex-col items-center border-b border-white/10 relative">
-          <div className="w-full flex justify-end lg:flex hidden absolute top-3 right-3">
-             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-md transition-colors">
-               <Menu size={20} className="text-blue-50" />
-             </button>
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-[#00316E] transition-all duration-300 ease-in-out flex flex-col h-full z-30 shadow-2xl shrink-0`}>
+        {/* Header with Centered Logo and Collapse Toggle */}
+        <div className="px-3 pt-4 pb-2 flex flex-col items-center justify-center w-full">
+          <div className={`w-full flex items-center ${isSidebarOpen ? 'justify-end mb-1' : 'justify-center mb-2'}`}>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
+              title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <Menu size={18} />
+            </button>
           </div>
-          
-          <Logo collapsed={!isSidebarOpen} />
+          <div className="w-full flex justify-center pb-2">
+            <Logo collapsed={!isSidebarOpen} />
+          </div>
         </div>
 
-        <nav className="flex-1 p-4 mt-3 space-y-2 overflow-y-auto custom-scrollbar">
-          {filteredNavItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveModule(item.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
-                activeModule === item.id 
-                  ? 'bg-white text-[#00316E] shadow-lg border border-white/20' 
-                  : 'text-white hover:bg-white/10'
-              } ${!isSidebarOpen && 'justify-center'}`}
-            >
-              <item.icon size={24} className={activeModule === item.id ? 'text-[#00316E]' : 'text-blue-50'} />
-              {isSidebarOpen && <span className="font-bold text-sm">{item.label}</span>}
-            </button>
-          ))}
+        {/* Navigation Items */}
+        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto custom-scrollbar">
+          {filteredNavItems.map((item) => {
+            const isActive = activeModule === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveModule(item.id)}
+                title={item.label}
+                className={`w-full flex items-center gap-3.5 py-3 px-3 rounded-xl transition-all duration-150 group relative ${
+                  isActive 
+                    ? 'bg-white text-[#00316E] shadow-md font-semibold' 
+                    : 'text-blue-100 hover:bg-white/10 hover:text-white font-medium'
+                } ${!isSidebarOpen ? 'justify-center px-0' : ''}`}
+              >
+                <item.icon 
+                  size={22} 
+                  className={`shrink-0 transition-transform duration-150 ${
+                    isActive ? 'text-[#00316E]' : 'text-blue-100 group-hover:text-white'
+                  }`} 
+                />
+                {isSidebarOpen && (
+                  <span className="text-sm tracking-normal whitespace-nowrap truncate">
+                    {item.label}
+                  </span>
+                )}
+                {/* Tooltip for collapsed state */}
+                {!isSidebarOpen && (
+                  <div className="absolute left-full ml-3 px-3 py-1.5 bg-blue-50 text-blue-900 border border-blue-200 text-xs font-semibold rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 pointer-events-none">
+                    {item.label}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Topbar */}
-        <header className="h-15 bg-white border-b border-gray-200 px-6 flex items-center justify-end z-20 sticky top-0">
-          
+        <header className="h-16 bg-white border-b border-gray-100 px-6 flex items-center justify-end z-20 sticky top-0 shrink-0">
           <div className="flex items-center gap-6">
             <div className="relative group">
               <button className="p-2.5 text-gray-400 hover:bg-gray-100 rounded-full transition-colors relative">

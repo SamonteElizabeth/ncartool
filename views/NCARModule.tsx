@@ -284,9 +284,13 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
   const filteredNCARs = useMemo(() => {
     return ncars.filter(ncar => {
+      const responsible = actionPlans.find(a => a.ncarId === ncar.id)?.responsiblePerson || ncar.auditee || '';
       const matchesSearch = ncar.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             ncar.requirement.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            ncar.area.toLowerCase().includes(searchQuery.toLowerCase());
+                            ncar.area.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (ncar.auditType && ncar.auditType.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (ncar.processName && ncar.processName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            responsible.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesStatus = statusFilter === 'All Status';
         if (!matchesStatus) {
@@ -373,72 +377,117 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#00316E] text-white">
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">NCAR ID</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">Finding Type</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide">Requirement</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Deadline</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Status</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-wide text-center">Action</th>
+              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">NCAR ID</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Audit Type</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Process</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Finding Type</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Requirement</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Responsible</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Deadline</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Status</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredNCARs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest italic opacity-60">No NCARs matching criteria</td>
+                  <td colSpan={9} className="px-8 py-12 text-center text-gray-400 font-medium text-sm">No NCARs matching criteria</td>
                 </tr>
               ) : (
-                filteredNCARs.map(ncar => (
-                  <tr key={ncar.id} className="hover:bg-blue-50/20 transition-all group">
-                    <td className="px-5 py-4">
-                      <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100">{ncar.id}</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`text-sm font-bold px-3 py-1 rounded-full uppercase border ${
-                        ncar.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                      }`}>
-                        {ncar.findingType}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-[#4B5563] text-sm line-clamp-1">{ncar.requirement}</p>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <div className="text-sm font-bold text-[#4B5563]">{new Date(ncar.deadline).toLocaleDateString()}</div>
-                      <div className="text-xs font-bold text-blue-500 uppercase mt-0.5">{getDaysRemaining(ncar.deadline)} days left</div>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className={`text-sm font-black px-3 py-1 rounded-full uppercase border ${
-                        ncar.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 
-                        ncar.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        ncar.status === NCARStatus.VALIDATED ? 'bg-green-50 text-blue-700 border-blue-200' :
-                        ncar.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : 
-                        ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'
-                      }`}>
-                        {ncar.status === NCARStatus.VALIDATED ? 'Approved' : (ncar.status === NCARStatus.REOPENED ? 'Rejected' : ncar.status)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <div className="flex justify-center">
-                        <button 
-                          onClick={() => handleAction(ncar)}
-                          className={`p-2 rounded-xl transition-all border ${
-                            isAuditee && (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED)
-                            ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100'
-                            : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100'
-                          }`}
-                          title={isAuditee ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? "Revise Action Plan" : "View Finding") : "Edit Finding"}
-                        >
-                          {isAuditee ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? <RefreshCcw size={20} /> : <Eye size={20} />) : <Edit3 size={20} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredNCARs.map(ncar => {
+                  const ap = actionPlans.find(a => a.ncarId === ncar.id);
+                  const responsibleName = ap?.responsiblePerson || ncar.auditee || '-';
+                  const initial = responsibleName !== '-' ? responsibleName.charAt(0).toUpperCase() : '?';
+
+                  return (
+                    <tr key={ncar.id} className="hover:bg-blue-50/20 transition-all group">
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter border border-blue-100 whitespace-nowrap">{ncar.id}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-xs font-medium text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded border border-blue-200/60 whitespace-nowrap">
+                          {ncar.auditType || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-normal text-gray-700 max-w-[150px] truncate block" title={ncar.processName}>
+                          {ncar.processName || '-'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border whitespace-nowrap ${
+                          ncar.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                        }`}>
+                          {ncar.findingType}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="font-normal text-gray-700 text-sm line-clamp-1 max-w-[200px]" title={ncar.requirement}>{ncar.requirement}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                            {initial}
+                          </div>
+                          <span className="text-sm font-normal text-gray-700 whitespace-nowrap max-w-[130px] truncate" title={responsibleName}>
+                            {responsibleName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="text-sm font-normal text-gray-600 whitespace-nowrap">{new Date(ncar.deadline).toLocaleDateString()}</div>
+                        <div className="text-xs font-medium text-blue-600 uppercase mt-0.5 whitespace-nowrap">{getDaysRemaining(ncar.deadline)} days left</div>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border whitespace-nowrap ${
+                          ncar.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 
+                          ncar.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          ncar.status === NCARStatus.VALIDATED ? 'bg-green-50 text-blue-700 border-blue-200' :
+                          ncar.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : 
+                          ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'
+                        }`}>
+                          {ncar.status === NCARStatus.VALIDATED ? 'Approved' : (ncar.status === NCARStatus.REOPENED ? 'Rejected' : ncar.status)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex justify-center">
+                          {(() => {
+                            const tooltipText = isAuditee 
+                              ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? "Revise Action Plan" : "View Finding") 
+                              : "Edit Finding";
+                            return (
+                              <div className="relative group/tooltip inline-flex justify-center items-center">
+                                <button 
+                                  onClick={() => handleAction(ncar)}
+                                  className={`p-2 rounded-xl transition-all border ${
+                                    isAuditee && (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED)
+                                    ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100'
+                                    : 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100'
+                                  }`}
+                                  title={tooltipText}
+                                  aria-label={tooltipText}
+                                >
+                                  {isAuditee ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? <RefreshCcw size={20} /> : <Eye size={20} />) : <Edit3 size={20} />}
+                                </button>
+                                <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
+                                  <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
+                                    {tooltipText}
+                                  </span>
+                                  <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

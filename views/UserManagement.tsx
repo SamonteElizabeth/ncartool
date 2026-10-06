@@ -81,11 +81,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">User</th>
-                <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Department</th>
-                <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Role</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
+              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-blue-900 uppercase tracking-wider">User</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-blue-900 uppercase tracking-wider">Department</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-blue-900 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-blue-900 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-[#4B5563]">
@@ -93,23 +93,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#00316E] font-bold">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#00316E] font-semibold">
                         {user.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-[#4B5563]">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="font-semibold text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-500 font-normal">{user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-gray-600">
                       <Building2 size={16} />
-                      <span className="text-sm font-medium">{user.dept}</span>
+                      <span className="text-sm font-normal text-gray-700">{user.dept}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
                       user.role === 'DEV_ADMIN' ? 'bg-purple-100 text-purple-700' :
                       user.role === 'LEAD_AUDITOR' ? 'bg-blue-100 text-blue-700' :
                       user.role === 'AUDITOR' ? 'bg-emerald-100 text-emerald-700' :
@@ -121,12 +121,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                   </td>
                   <td className="px-6 py-4 text-right">
                     {user.role !== 'DEV_ADMIN' && (
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="relative group/tooltip inline-flex justify-center items-center">
+                        <button 
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete User"
+                          aria-label="Delete User"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <div className="pointer-events-none absolute bottom-full mb-2 right-0 hidden group-hover/tooltip:flex flex-col items-end z-30 transition-all duration-150">
+                          <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
+                            Delete User
+                          </span>
+                          <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1 mr-3"></span>
+                        </div>
+                      </div>
                     )}
                   </td>
                 </tr>

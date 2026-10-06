@@ -324,18 +324,18 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#00316E] text-white">
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Plan ID</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Docs</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Start Date</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">End Date</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Teams</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest">Status</th>
-                <th className="px-5 py-4 text-sm font-bold uppercase tracking-widest text-center">Actions</th>
+              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Plan ID</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Docs</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Start Date</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">End Date</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Teams</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Status</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
@@ -344,7 +344,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center opacity-40">
                       <Search size={48} className="mb-4" />
-                      <p className="font-bold uppercase tracking-widest">No plans matching criteria</p>
+                      <p className="font-medium text-sm text-gray-400">No plans matching criteria</p>
                     </div>
                   </td>
                 </tr>
@@ -358,40 +358,40 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                       {plan.attachmentName ? (
                          <div className="flex flex-col items-center gap-1 group/file cursor-pointer" onClick={() => onNotify(`Downloading ${plan.attachmentName}`)}>
                            <FileIcon size={18} className="text-blue-500 group-hover/file:scale-110 transition-transform" />
-                           <span className="text-[9px] font-bold text-gray-400 truncate max-w-[80px] uppercase tracking-tighter">{plan.attachmentName}</span>
+                           <span className="text-[10px] font-normal text-gray-500 truncate max-w-[80px]">{plan.attachmentName}</span>
                          </div>
                       ) : (
-                        <span className="text-[12px] text-gray-300">N/A</span>
+                        <span className="text-[12px] text-gray-400">N/A</span>
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-2.5 text-[12px] text-gray-600 font-bold">
+                      <div className="flex items-center gap-2.5 text-[12px] text-gray-600 font-normal">
                         <Calendar size={16} className="text-gray-400" />
                         {plan.startDate}
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-2.5 text-[12px] text-gray-600 font-bold">
+                      <div className="flex items-center gap-2.5 text-[12px] text-gray-600 font-normal">
                         <Calendar size={16} className="text-gray-400" />
                         {plan.endDate}
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-1.5">
-                        <div className="flex items-start gap-1.5 text-[12px] text-blue-600 font-black uppercase tracking-tighter">
-                          <Users size={14} className="mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start gap-1.5 text-[12px] text-blue-700 font-medium">
+                          <Users size={14} className="mt-0.5 flex-shrink-0 text-blue-500" />
                           <span>Auditors: {plan.auditors.join(', ')}</span>
                         </div>
-                        <div className="flex items-start gap-1.5 text-[12px] text-gray-500 uppercase tracking-tighter">
-                          <Users size={14} className="mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start gap-1.5 text-[12px] text-gray-500 font-normal">
+                          <Users size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
                           <span>Auditees: {plan.auditees.join(', ')}</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase border ${
-                        plan.status === AuditStatus.DRAFT ? 'bg-gray-50 text-gray-400 border-gray-200' :
-                        plan.status === AuditStatus.PLANNED ? 'bg-blue-50 text-blue-500 border-blue-100' :
+                      <span className={`text-[11px] font-medium px-3 py-1 rounded-full uppercase border ${
+                        plan.status === AuditStatus.DRAFT ? 'bg-gray-50 text-gray-500 border-gray-200' :
+                        plan.status === AuditStatus.PLANNED ? 'bg-blue-50 text-blue-600 border-blue-100' :
                         plan.status === AuditStatus.ACTUAL ? 'bg-orange-50 text-orange-600 border-orange-100' : 
                         'bg-green-50 text-green-600 border-green-100'
                       }`}>
@@ -401,16 +401,22 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center gap-2">
                         {isLead && (
-                          <>
+                          <div className="relative group/tooltip inline-flex justify-center items-center">
                             <button
                               onClick={() => handleEdit(plan)}
                               className={`p-2 rounded-xl transition-all border text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100 hover:text-blue-700`}
-                              title="Edit Plan"
+                              title="Edit Audit Plan"
+                              aria-label="Edit Audit Plan"
                             >
                               <Edit3 size={18} />
                             </button>
-                            
-                          </>
+                            <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
+                              <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
+                                Edit Audit Plan
+                              </span>
+                              <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </td>

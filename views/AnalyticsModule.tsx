@@ -344,22 +344,22 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Department</th>
-              <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Total NCARs</th>
-              <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Total OFIs</th>
-              <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Closure Rate</th>
+            <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Department</th>
+              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Total NCARs</th>
+              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Total OFIs</th>
+              <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Closure Rate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-[#4B5563]">
             {deptData.map((dept, i) => (
               <tr key={i} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-5 py-4 font-bold text-[#4B5563]">{dept.name}</td>
-                <td className="px-5 py-4 font-bold text-blue-600">{dept.NCARs}</td>
-                <td className="px-5 py-4 font-bold text-emerald-600">{dept.OFIs}</td>
+                <td className="px-5 py-4 font-semibold text-gray-800">{dept.name}</td>
+                <td className="px-5 py-4 font-normal text-blue-600">{dept.NCARs}</td>
+                <td className="px-5 py-4 font-normal text-emerald-600">{dept.OFIs}</td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -368,7 +368,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
                         style={{ width: `${dept.NCARs + dept.OFIs > 0 ? (dept.Closed / (dept.NCARs + dept.OFIs)) * 100 : 100}%` }}
                       />
                     </div>
-                    <span className="text-sm font-black text-gray-600">
+                    <span className="text-sm font-medium text-gray-600">
                       {dept.NCARs + dept.OFIs > 0 ? Math.round((dept.Closed / (dept.NCARs + dept.OFIs)) * 100) : 100}%
                     </span>
                   </div>
@@ -417,49 +417,49 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
       </div>
 
       {/* Manager Detailed Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-50 bg-gray-50/50">
-          <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Manager Performance Index</h3>
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-blue-100 bg-blue-50/40">
+          <h3 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Manager Performance Index</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50/30">
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Manager</th>
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">NCARs</th>
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Escalated</th>
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">Avg Response TAT</th>
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">CAP Timeliness</th>
-                <th className="px-5 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">KPI Score</th>
+              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Manager</th>
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">NCARs</th>
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Escalated</th>
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">Avg Response TAT</th>
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">CAP Timeliness</th>
+                <th className="px-5 py-4 text-xs font-semibold text-blue-900 uppercase tracking-wider">KPI Score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-[#4B5563]">
               {managerData.map((manager, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-5 py-4">
-                    <p className="font-bold text-[#4B5563]">{manager.name}</p>
-                    <p className="text-sm text-gray-500">{manager.dept}</p>
+                    <p className="font-semibold text-gray-800">{manager.name}</p>
+                    <p className="text-sm font-normal text-gray-500">{manager.dept}</p>
                   </td>
-                  <td className="px-5 py-4 font-bold text-[#4B5563]">{manager.totalNCARs}</td>
+                  <td className="px-5 py-4 font-normal text-gray-700">{manager.totalNCARs}</td>
                   <td className="px-5 py-4">
-                    <span className={`font-bold ${manager.escalated > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                    <span className={`font-medium ${manager.escalated > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                       {manager.escalated}
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`font-bold ${Number(manager.avgResponseTAT) > tatThreshold ? 'text-orange-600' : 'text-emerald-600'}`}>
+                    <span className={`font-medium ${Number(manager.avgResponseTAT) > tatThreshold ? 'text-orange-600' : 'text-emerald-600'}`}>
                       {manager.avgResponseTAT} days
                     </span>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
-                      <span className={`font-bold ${manager.capTimeliness < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                      <span className={`font-medium ${manager.capTimeliness < 80 ? 'text-orange-600' : 'text-emerald-600'}`}>
                         {manager.capTimeliness}%
                       </span>
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-black uppercase tracking-widest ${
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
                       manager.score >= 90 ? 'bg-emerald-50 text-emerald-600' :
                       manager.score >= 70 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
                     }`}>
