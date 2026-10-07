@@ -124,7 +124,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         (statusFilter === 'Approved' && ncar.status === NCARStatus.CLOSED) ||
         (statusFilter === 'Rejected' && (ncar.status === NCARStatus.REJECTED || ncar.status === NCARStatus.REOPENED)) ||
         (statusFilter === 'For Approval' && ncar.status === NCARStatus.FOR_APPROVAL) ||
-        (statusFilter === 'Pending' && ncar.status === NCARStatus.PENDING) ||
+        (statusFilter === 'Pending' && (ncar.status === NCARStatus.PENDING || (!isAuditee && ncar.status === NCARStatus.FOR_APPROVAL))) ||
         ncar.status.toLowerCase() === statusFilter.toLowerCase();
 
       const matchesType = 
@@ -195,6 +195,46 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
   };
 
   const pendingCount = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length;
+  const statusOptions = [
+    { label: 'All Status', count: ncars.length },
+    { label: 'Approved', count: ncars.filter(n => n.status === NCARStatus.CLOSED).length },
+    { label: 'Rejected', count: ncars.filter(n => n.status === NCARStatus.REJECTED || n.status === NCARStatus.REOPENED).length },
+    ...(isAuditee
+      ? [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.PENDING).length }]
+      : [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length }])
+  ];
+  const statusCards = statusOptions.map(({ label, count }) => {
+    const selected = statusFilter === label;
+    const palette = label === 'Approved'
+      ? { icon: CheckCircle2, title: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700', stripe: 'bg-emerald-500', selected: 'ring-2 ring-emerald-100 border-emerald-200' }
+      : label === 'Rejected'
+        ? { icon: XCircle, title: 'text-rose-700', badge: 'bg-rose-50 text-rose-700', stripe: 'bg-rose-500', selected: 'ring-2 ring-rose-100 border-rose-200' }
+        : label === 'Pending' || label === 'For Approval'
+          ? { icon: Clock, title: 'text-amber-700', badge: 'bg-amber-50 text-amber-700', stripe: 'bg-orange-400', selected: 'ring-2 ring-orange-100 border-orange-200' }
+        : { icon: ClipboardList, title: 'text-[#172554]', badge: 'bg-indigo-50 text-[#172554]', stripe: 'bg-[#172554]', selected: 'ring-2 ring-indigo-100 border-indigo-200' };
+    const StatusIcon = palette.icon;
+    const caption = label === 'All Status' ? 'All action plans' : label === 'Approved' ? 'Successfully completed' : label === 'Rejected' ? 'Requires revision' : label === 'Pending' ? (isAuditee ? 'Awaiting action plan' : 'Awaiting review') : 'Awaiting review';
+
+    return (
+      <button
+        key={label}
+        type="button"
+        onClick={() => setStatusFilter(label)}
+        aria-pressed={selected}
+        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? palette.selected : 'border-[#e7e5e4]'}`}
+      >
+        <span className={`absolute inset-x-0 top-0 h-1 ${palette.stripe}`} />
+        <span className="flex min-w-0 items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium text-slate-600">{label}</span>
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${palette.badge}`}>
+            <StatusIcon size={19} strokeWidth={2} />
+          </span>
+        </span>
+        <span className={`block text-3xl font-bold leading-none tracking-tight ${selected ? palette.title : 'text-slate-900'}`}>{count}</span>
+        <span className="block truncate text-[11px] font-normal text-slate-500">{caption}</span>
+      </button>
+    );
+  });
 
   return (
     <div className="space-y-5 text-base relative">
@@ -210,7 +250,13 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         )}
       </div>
 
-      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+        <div className={`grid w-full grid-cols-2 auto-rows-fr items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-4 ${statusOptions.length > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`} role="group" aria-label="Filter by action plan status">
+          {statusCards}
+        </div>
+      </div>
+
+      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
           <input 
@@ -222,7 +268,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
             className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-normal"
           />
         </div>
-        <div className="flex gap-3 relative" ref={filterRef}>
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 relative" ref={filterRef}>
           <div className="relative group/tooltip inline-block">
             <button 
               onClick={() => setShowFilters(!showFilters)} 
@@ -250,17 +296,6 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
               ))}
             </div>
           )}
-          <select 
-            value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)} 
-            title="Filter by action plan status"
-            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-          >
-            <option value="All Status">All Status</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            {isAuditee ? <><option value="Pending">Pending</option><option value="Reopened">Reopened</option></> : <option value="For Approval">For Approval</option>}
-          </select>
         </div>
       </div>
 

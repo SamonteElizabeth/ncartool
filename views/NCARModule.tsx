@@ -26,7 +26,8 @@ import {
   MessageSquare,
   RefreshCcw,
   PlusCircle,
-  Eraser
+  Eraser,
+  Trash2
 } from 'lucide-react';
 
 interface NCARModuleProps {
@@ -158,6 +159,13 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
     setIsCreatingActionPlan(false);
     setShowForm(true);
+  };
+
+  const handleDelete = (ncar: NCAR) => {
+    if (isAuditee || !window.confirm(`Delete NCAR ${ncar.id} and its linked action plan? This action cannot be undone.`)) return;
+    setNcars(prev => prev.filter(item => item.id !== ncar.id));
+    setActionPlans(prev => prev.filter(plan => plan.ncarId !== ncar.id));
+    onNotify(`NCAR ${ncar.id} and its linked action plan deleted.`, 'success');
   };
 
   const handleApprove = () => {
@@ -455,12 +463,13 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <div className="flex justify-center">
+                        <div className="flex justify-center gap-2">
                           {(() => {
                             const tooltipText = isAuditee 
                               ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? "Revise Action Plan" : "View Finding") 
                               : "Edit Finding";
                             return (
+                              <>
                               <div className="relative group/tooltip inline-flex justify-center items-center">
                                 <button 
                                   onClick={() => handleAction(ncar)}
@@ -481,6 +490,17 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                                   <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
                                 </div>
                               </div>
+                              {!isAuditee && (
+                                <button
+                                  onClick={() => handleDelete(ncar)}
+                                  className="p-2 rounded-xl transition-all border text-red-600 bg-red-50 border-red-100 hover:bg-red-100"
+                                  title="Delete NCAR"
+                                  aria-label={`Delete NCAR ${ncar.id}`}
+                                >
+                                  <Trash2 size={20} />
+                                </button>
+                              )}
+                              </>
                             );
                           })()}
                         </div>
@@ -496,7 +516,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] shadow-2xl overflow-y-auto animate-in fade-in zoom-in duration-200">
             {!isCreatingActionPlan ? (
               <form onSubmit={handleSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">

@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Search,
   Filter,
-  CalendarDays
+  CalendarDays,
+  Trash2
 } from 'lucide-react';
 import { INITIAL_USERS } from '../mockData';
 
@@ -157,6 +158,12 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
       }
       return p;
     }));
+  };
+
+  const handleDelete = (plan: AuditPlan) => {
+    if (!isLead || !window.confirm(`Delete audit plan ${plan.id}? This action cannot be undone.`)) return;
+    setPlans(prev => prev.filter(item => item.id !== plan.id));
+    onNotify(`Audit plan ${plan.id} deleted.`, 'success');
   };
 
   const handleEdit = (plan: AuditPlan) => {
@@ -416,6 +423,14 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                               </span>
                               <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
                             </div>
+                            <button
+                              onClick={() => handleDelete(plan)}
+                              className="p-2 rounded-xl transition-all border text-red-600 bg-red-50 border-red-100 hover:bg-red-100 hover:text-red-700"
+                              title="Delete Audit Plan"
+                              aria-label={`Delete Audit Plan ${plan.id}`}
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
                         )}
                       </div>

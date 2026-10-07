@@ -195,12 +195,51 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
   };
 
   const pendingCount = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length;
+  const validatableNCARs = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED);
+  const statusOptions = [
+    { label: 'All', title: 'All Status', count: validatableNCARs.length },
+    { label: 'Approved', title: 'Approved', count: validatableNCARs.filter(n => n.status === NCARStatus.CLOSED || n.status === NCARStatus.VALIDATED).length },
+    { label: 'Rejected', title: 'Rejected', count: validatableNCARs.filter(n => n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED).length },
+    { label: 'Pending', title: 'Pending', count: validatableNCARs.filter(n => n.status === NCARStatus.FOR_APPROVAL).length }
+  ];
+  const statusCards = statusOptions.map(({ label, title, count }) => {
+    const selected = statusFilter === label;
+    const palette = label === 'Approved'
+      ? { icon: CheckCircle2, title: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700', stripe: 'bg-emerald-500', selected: 'ring-2 ring-emerald-100 border-emerald-200' }
+      : label === 'Rejected'
+        ? { icon: XCircle, title: 'text-rose-700', badge: 'bg-rose-50 text-rose-700', stripe: 'bg-rose-500', selected: 'ring-2 ring-rose-100 border-rose-200' }
+        : label === 'Pending'
+          ? { icon: Clock, title: 'text-amber-700', badge: 'bg-amber-50 text-amber-700', stripe: 'bg-orange-400', selected: 'ring-2 ring-orange-100 border-orange-200' }
+          : { icon: ClipboardList, title: 'text-[#172554]', badge: 'bg-indigo-50 text-[#172554]', stripe: 'bg-[#172554]', selected: 'ring-2 ring-indigo-100 border-indigo-200' };
+    const StatusIcon = palette.icon;
+    const caption = label === 'All' ? 'All items for validation' : label === 'Approved' ? 'Successfully completed' : label === 'Rejected' ? 'Requires revision' : 'Awaiting review';
+
+    return (
+      <button
+        key={label}
+        type="button"
+        onClick={() => setStatusFilter(label)}
+        aria-pressed={selected}
+        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? palette.selected : 'border-[#e7e5e4]'}`}
+      >
+        <span className={`absolute inset-x-0 top-0 h-1 ${palette.stripe}`} />
+        <span className="flex min-w-0 items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium text-slate-600">{title}</span>
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${palette.badge}`}>
+            <StatusIcon size={19} strokeWidth={2} />
+          </span>
+        </span>
+        <span className={`block text-3xl font-bold leading-none tracking-tight ${selected ? palette.title : 'text-slate-900'}`}>{count}</span>
+        <span className="block truncate text-[11px] font-normal text-slate-500">{caption}</span>
+      </button>
+    );
+  });
 
   return (
     <div className="space-y-5 text-base relative">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Validation</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">AP Validation</h3>
         </div>
         <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 flex items-center gap-3">
           <div className="w-3 h-3 bg-[#172554] rounded-full animate-pulse"></div>
@@ -208,7 +247,13 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
         </div>
       </div>
 
-      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="grid w-full grid-cols-2 auto-rows-fr items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-4" role="group" aria-label="Filter by validation status">
+          {statusCards}
+        </div>
+      </div>
+
+      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input 
@@ -219,7 +264,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
             className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-normal"
           />
         </div>
-        <div className="flex gap-3 relative" ref={filterRef}>
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 relative" ref={filterRef}>
           <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all border-2 ${typeFilters.length > 0 || showFilters ? 'bg-blue-50 border-blue-200 text-[#172554]' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}>
             <Filter size={20} /> Filters
           </button>
@@ -234,12 +279,6 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
               ))}
             </div>
           )}
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">
-            <option value="All">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
         </div>
       </div>
 

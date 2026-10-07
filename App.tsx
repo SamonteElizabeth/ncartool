@@ -113,7 +113,7 @@ const App: React.FC = () => {
     { id: 'planning', label: 'Audit Plan ', icon: ClipboardList, roles: ['LEAD_AUDITOR', 'AUDITOR'] },
     { id: 'ncar', label: 'NCAR ', icon: AlertCircle, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
     { id: 'actions', label: 'Action Plans', icon: CheckSquare, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
-    { id: 'validation', label: 'Validation', icon: ShieldCheck, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
+    { id: 'validation', label: 'AP Validation', icon: ShieldCheck, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
     { id: 'users', label: 'User Management', icon: UserPlus, roles: ['DEV_ADMIN'] },
     { id: 'manual', label: 'User Manual', icon: FileText, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE', 'DEV_ADMIN'] },
   ];
@@ -249,7 +249,7 @@ const App: React.FC = () => {
                 title={item.label}
                 className={`w-full flex items-center gap-3.5 py-3 px-3 rounded-xl transition-all duration-150 group relative ${
                   isActive 
-                    ? 'bg-white text-[#172554] shadow-md font-semibold'
+                    ? 'bg-[#DCE8F8] text-[#172554] shadow-md ring-1 ring-white/40 font-semibold'
                     : 'text-blue-100 hover:bg-white/10 hover:text-white font-medium'
                 } ${!isSidebarOpen ? 'justify-center px-0' : ''}`}
               >
