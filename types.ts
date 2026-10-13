@@ -1,7 +1,7 @@
 
-export type Role = 'LEAD_AUDITOR' | 'AUDITOR' | 'AUDITEE' | 'GUEST' | 'DEV_ADMIN';
+export type Role = 'LEAD_AUDITOR' | 'HEAD_MANAGER' | 'AUDITOR' | 'AUDITEE' | 'GUEST' | 'DEV_ADMIN';
 
-export type AuditType = 'Quality/InfoSec' | 'Financial' | 'Special Request';
+export type AuditType = 'QMS' | 'ISMS' | 'Quality/InfoSec' | 'Financial' | 'Special Request';
 
 export type Designation = 'Manager' | 'Assistant Manager' | 'Supervisor' | 'Department Head' | 'Staff';
 
@@ -13,9 +13,14 @@ export enum AuditStatus {
 }
 
 export enum NCARStatus {
+  DRAFT = 'Draft',
+  PART1_SUBMITTED = 'Part 1 Submitted',
   PENDING = 'Pending',
   FOR_APPROVAL = 'For Approval',
+  LEAD_APPROVED = 'Lead Auditor Approved',
+  APPROVED = 'Approved',
   ACTION_PLAN_SUBMITTED = 'Action Plan Submitted',
+  CAP_LEAD_APPROVED = 'CAP Approved by Lead Auditor',
   REJECTED = 'Rejected',
   VALIDATED = 'Validated',
   CLOSED = 'Closed',
@@ -42,6 +47,7 @@ export interface NCAR {
   statement: string;
   requirement: string;
   evidence: string;
+  evidenceAttachments?: { name: string; type: string; size: number; dataUrl: string }[];
   findingType: 'Major' | 'Minor' | 'OFI';
   standardClause: string;
   clauseNumber?: string; // Required for QIS
@@ -56,7 +62,41 @@ export interface NCAR {
   auditType: AuditType;
   processName: string;
   isEscalated: boolean;
+  escalationStatus?: 'Successfully Escalated to EEM';
+  escalatedAt?: string;
+  escalatedBy?: string;
   responseAt?: string; // When the action plan was first submitted
+  systemType?: 'QMS/ISMS' | 'QMS' | 'ISMS' | 'Business';
+  issueDate?: string;
+  processInvolved?: string;
+  managerResponsible?: string;
+  departmentResponsible?: string;
+  issuingAuditor?: string;
+  createdByRole?: Role;
+  assignedByAuditReportId?: string;
+  assignedAt?: string;
+  responseSla?: {
+    startedAt: string;
+    dueDate: string;
+    status: 'On Track' | 'Due Soon' | 'Overdue' | 'Submitted';
+    notificationHistory: { type: 'due-soon' | 'overdue'; notifiedAt: string }[];
+  };
+  ofiResponse?: OFIResponse;
+}
+
+export type OFIResponseStatus = 'Pending' | 'Accepted' | 'Rejected' | 'In Progress' | 'Implemented';
+
+export interface OFIResponse {
+  status: OFIResponseStatus;
+  responseDate: string;
+  applicable?: 'Yes' | 'No';
+  correctiveActionPlan?: string;
+  responsiblePerson?: string;
+  targetDate?: string;
+  notes?: string;
+  implementationProgress?: string;
+  evidenceAttachments?: { name: string; type: string; size: number; dataUrl: string }[];
+  updatedAt?: string;
 }
 
 export interface ActionPlan {
@@ -70,7 +110,55 @@ export interface ActionPlan {
   submittedAt: string;
   completedAt?: string; // For tracking implementation timeliness
   remarks?: string;
+  responseDate?: string;
+  consequenceImpact?: string;
+  correctionResponsible?: string;
+  correctionAdditionalAuditeeResponsible?: string;
+  correctionTargetDate?: string;
+  canOccurElsewhere?: 'Yes' | 'No';
+  elsewhereDetails?: string;
+  capResponsible?: string;
+  additionalAuditeeResponsible?: string;
+  capTargetDate?: string;
+  isDraft?: boolean;
 }
+
+export type AuditReportStatus = 'Draft' | 'Awaiting Auditee Responses' | 'Pending Lead Review' | 'Pending Final Approval' | 'Pending Approval' | 'Approved' | 'Rejected';
+
+export interface AuditReportClause {
+  id: string;
+  clause: string;
+  highlights: string;
+  lowlights: string;
+  ncarIds: string[];
+  ofiIds: string[];
+}
+
+export interface AuditReport {
+  id: string;
+  reportTitle: string;
+  subject: string;
+  referenceNumber: string;
+  linkedAuditPlanId: string;
+  preparedBy: string;
+  releaseDate: string;
+  confidentiality: string;
+  objectives: string;
+  conclusion: string;
+  ncarIds: string[];
+  ofiIds: string[];
+  repeatNcarIds: string[];
+  clauses: AuditReportClause[];
+  workflowStep?: number;
+  resultsGeneratedAt?: string;
+  status: AuditReportStatus;
+  approvedBy?: string;
+  approvedAt?: string;
+  leadApprovedBy?: string;
+  leadApprovedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export interface Notification {
   id: string;
@@ -78,6 +166,8 @@ export interface Notification {
   type: 'info' | 'success' | 'warning';
   timestamp: string;
   read?: boolean;
+  recipientName?: string;
+  relatedRecordId?: string;
 }
 
 export interface User {

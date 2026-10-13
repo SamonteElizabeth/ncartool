@@ -1,20 +1,20 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Building2, Shield, Trash2, Search, Pencil, X } from 'lucide-react';
 import { User, Role } from '../types';
 
 interface UserManagementProps {
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  departments: string[];
   onNotify: (message: string, type: 'info' | 'success' | 'warning') => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNotify }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, departments, onNotify }) => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
   const [departmentFilter, setDepartmentFilter] = useState('');
-  const departments = useMemo(() => [...new Set(users.map(user => user.dept).filter(Boolean))].sort(), [users]);
 
   const handleEditUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +65,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
           </div>
           <select aria-label="Filter by role" value={roleFilter} onChange={e => setRoleFilter(e.target.value as Role | '')} className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm">
             <option value="">All roles</option>
-            <option value="DEV_ADMIN">Dev Admin</option><option value="LEAD_AUDITOR">Lead Auditor</option>
+            <option value="DEV_ADMIN">Dev Admin</option><option value="LEAD_AUDITOR">Lead Auditor</option><option value="HEAD_MANAGER">Head Manager</option>
             <option value="AUDITOR">Auditor</option><option value="AUDITEE">Auditee</option><option value="GUEST">Guest</option>
           </select>
           <select aria-label="Filter by department" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm">
@@ -107,6 +107,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
                       user.role === 'DEV_ADMIN' ? 'bg-purple-100 text-purple-700' :
                       user.role === 'LEAD_AUDITOR' ? 'bg-blue-100 text-blue-700' :
+                      user.role === 'HEAD_MANAGER' ? 'bg-amber-100 text-amber-700' :
                       user.role === 'AUDITOR' ? 'bg-emerald-100 text-emerald-700' :
                       'bg-gray-100 text-[#4B5563]'
                     }`}>
@@ -177,14 +178,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Department <span className="text-red-500">*</span></label>
-                <input 
+                <select
                   required
-                  type="text"
                   value={editingUser.dept}
                   onChange={(e) => setEditingUser({...editingUser, dept: e.target.value})}
                   className="w-full px-4 py-3 bg-white border border-[#d9d4c8] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-normal text-gray-800"
-                  placeholder="e.g. Quality Assurance"
-                />
+                >
+                  {!departments.includes(editingUser.dept) && <option value={editingUser.dept}>{editingUser.dept}</option>}
+                  {departments.map(department => <option key={department} value={department}>{department}</option>)}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Designation <span className="text-red-500">*</span></label>
@@ -209,6 +211,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, onNoti
                 >
                   <option value="DEV_ADMIN">Dev Admin</option>
                   <option value="LEAD_AUDITOR">Lead Auditor</option>
+                  <option value="HEAD_MANAGER">Head Manager</option>
                   <option value="AUDITOR">Auditor</option>
                   <option value="AUDITEE">Auditee</option>
                   <option value="GUEST">Guest</option>

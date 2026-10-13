@@ -40,12 +40,14 @@ const MultiSelectDropdown = ({
   onChange: (val: string[]) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchQuery('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -59,18 +61,19 @@ const MultiSelectDropdown = ({
       onChange([...selected, option]);
     }
   };
+  const filteredOptions = options.filter(option => option.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="text-sm text-[#4B5563] font-bold uppercase tracking-widest block mb-2">{label}</label>
+      <label className="text-sm text-[#4B5563] font-medium uppercase tracking-widest block mb-2">{label}</label>
       <div 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); setSearchQuery(''); }}
         className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 flex items-center justify-between cursor-pointer focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[48px]"
       >
         <div className="flex flex-wrap gap-1.5">
           {selected.length > 0 ? (
             selected.map(item => (
-              <span key={item} className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
+              <span key={item} className="bg-blue-100 text-blue-700 text-[10px] font-medium px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
                 {item}
                 <X 
                   size={10} 
@@ -80,24 +83,27 @@ const MultiSelectDropdown = ({
               </span>
             ))
           ) : (
-            <span className="text-sm text-gray-400 font-bold">Select {label}...</span>
+            <span className="text-sm text-gray-400 font-normal">Select {label}...</span>
           )}
         </div>
         <ChevronDown size={18} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          {options.map(option => (
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-gray-100 bg-white shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="border-b border-gray-100 p-2"><div className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input autoFocus value={searchQuery} onChange={event => setSearchQuery(event.target.value)} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} placeholder={`Search ${label.toLowerCase()}...`} className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm font-normal outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100" /></div></div>
+          <div className="max-h-56 overflow-y-auto p-1.5">
+          {filteredOptions.length ? filteredOptions.map(option => (
             <div 
               key={option}
               onClick={() => toggleOption(option)}
-              className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors group"
+              className="flex cursor-pointer items-center justify-between rounded-lg p-3 transition-colors hover:bg-blue-50 group"
             >
-              <span className={`text-sm font-bold ${selected.includes(option) ? 'text-[#172554]' : 'text-gray-600'}`}>{option}</span>
+              <span className={`text-sm font-medium ${selected.includes(option) ? 'text-[#172554]' : 'text-gray-600'}`}>{option}</span>
               {selected.includes(option) && <Check size={16} className="text-[#172554]" />}
             </div>
-          ))}
+          )) : <p className="px-3 py-6 text-center text-xs font-medium text-gray-400">No matching options</p>}
+          </div>
         </div>
       )}
     </div>
@@ -113,16 +119,15 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
     auditors: [] as string[],
     auditees: [] as string[],
     attachmentName: '',
-    auditType: 'Quality/InfoSec' as AuditPlan['auditType'],
+    auditType: 'QMS' as AuditPlan['auditType'],
     processName: ''
   });
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All Status');
   const [dateFilter, setDateFilter] = useState('');
 
-  const isLead = role === 'LEAD_AUDITOR';
+  const isLead = role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER';
   
   const ALL_AUDITORS = INITIAL_USERS.filter((u: any) => u.role === 'AUDITOR' || u.role === 'LEAD_AUDITOR').map((u: any) => u.name);
   const ALL_AUDITEES = INITIAL_USERS.filter((u: any) => u.role === 'AUDITEE').map((u: any) => u.name);
@@ -192,6 +197,10 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
       onNotify('Please select at least one auditor and one auditee.', 'warning');
       return;
     }
+    if (!formData.processName.trim()) {
+      onNotify('Please select at least one process for the audit plan.', 'warning');
+      return;
+    }
 
     if (editingId) {
       setPlans(prev => prev.map(p => p.id === editingId ? {
@@ -237,7 +246,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
       auditors: [], 
       auditees: [], 
       attachmentName: '',
-      auditType: 'Quality/InfoSec',
+      auditType: 'QMS',
       processName: ''
     });
   };
@@ -248,8 +257,6 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                             p.auditors.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())) ||
                             p.auditees.some(a => a.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesStatus = statusFilter === 'All Status' || p.status === statusFilter;
-      
       let matchesDate = true;
       if (dateFilter) {
         // Filter: Selected date must be within start and end range of the audit
@@ -259,13 +266,12 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
         matchesDate = sel >= start && sel <= end;
       }
 
-      return matchesSearch && matchesStatus && matchesDate;
+      return matchesSearch && matchesDate;
     });
-  }, [plans, searchQuery, statusFilter, dateFilter]);
+  }, [plans, searchQuery, dateFilter]);
 
   const clearFilters = () => {
     setSearchQuery('');
-    setStatusFilter('All Status');
     setDateFilter('');
   };
 
@@ -310,16 +316,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
               className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl py-3 pl-12 pr-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal appearance-none"
             />
           </div>
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-
-          >
-            <option>All Status</option>
-            {Object.values(AuditStatus).map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          {(searchQuery || statusFilter !== 'All Status' || dateFilter) && (
+          {(searchQuery || dateFilter) && (
             <button 
               onClick={clearFilters}
               className="px-4 py-4 text-gray-400 hover:text-red-500 transition-colors"
@@ -341,14 +338,13 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Start Date</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">End Date</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Teams</th>
-                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Status</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredPlans.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center opacity-40">
                       <Search size={48} className="mb-4" />
                       <p className="font-medium text-sm text-gray-400">No plans matching criteria</p>
@@ -394,16 +390,6 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                           <span>Auditees: {plan.auditees.join(', ')}</span>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`text-[11px] font-medium px-3 py-1 rounded-full uppercase border ${
-                        plan.status === AuditStatus.DRAFT ? 'bg-gray-50 text-gray-500 border-gray-200' :
-                        plan.status === AuditStatus.PLANNED ? 'bg-blue-50 text-[#172554] border-blue-100' :
-                        plan.status === AuditStatus.ACTUAL ? 'bg-orange-50 text-orange-600 border-orange-100' : 
-                        'bg-green-50 text-green-600 border-green-100'
-                      }`}>
-                        {plan.status}
-                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center gap-2">
@@ -453,7 +439,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     <Calendar size={24} />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-black text-gray-800 tracking-tight">{editingId ? 'Update Audit Plan' : 'New Audit Plan'}</h4>
+                    <h4 className="text-2xl font-semibold text-gray-800 tracking-tight">{editingId ? 'Update Audit Plan' : 'New Audit Plan'}</h4>
                     <p className="text-sm text-gray-500 font-medium">{editingId ? `Editing plan details for ${editingId}` : 'Set timeline and assign responsibilities.'}</p>
                   </div>
                 </div>
@@ -465,38 +451,31 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-[#4B5563] font-bold">Audit Type</label>
+                    <label className="text-sm text-[#4B5563] font-medium">Audit Type</label>
                     <select 
                       required
                       value={formData.auditType}
                       onChange={(e) => setFormData({...formData, auditType: e.target.value as any})}
                       className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm appearance-none cursor-pointer font-normal"
                     >
-                      <option value="Quality/InfoSec">InfoSec</option>
-                      <option value="Financial">Quality</option>
+                      <option value="QMS">QMS</option>
+                      <option value="ISMS">ISMS</option>
+                      <option value="Quality/InfoSec">Quality/InfoSec (legacy)</option>
                       <option value="Financial">Financial</option>
                       <option value="Special Request">Special Request</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-sm text-[#4B5563] font-bold">Process Name</label>
-                    <select
-                      required
-                      value={formData.processName}
-                      onChange={(e) => setFormData({...formData, processName: e.target.value})}
-                      className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm appearance-none cursor-pointer font-normal"
-                    >
-                      <option value="">Select Process</option>
-                      {PROCESS_OPTIONS.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <MultiSelectDropdown
+                    label="Process Name"
+                    options={[...new Set([...PROCESS_OPTIONS, ...formData.processName.split(', ').filter(Boolean)])]}
+                    selected={formData.processName.split(', ').filter(Boolean)}
+                    onChange={selected => setFormData({ ...formData, processName: selected.join(', ') })}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-[#4B5563] font-bold">Start Date</label>
+                    <label className="text-sm text-[#4B5563] font-medium">Start Date</label>
                     <input 
                       required
                       type="date" 
@@ -506,7 +485,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-[#4B5563] font-bold">End Date</label>
+                    <label className="text-sm text-[#4B5563] font-medium">End Date</label>
                     <input 
                       required
                       type="date" 
@@ -533,7 +512,7 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                 </div>
 
                 <div>
-                  <label className="text-sm text-[#4B5563] font-bold">Attachment (Scope/Checklist)</label>
+                  <label className="text-sm text-[#4B5563] font-medium">Attachment (Scope/Checklist)</label>
                   <div className="relative group">
                     <input 
                       type="file" 
@@ -543,20 +522,20 @@ const AuditPlanning: React.FC<AuditPlanningProps> = ({ plans, setPlans, role, on
                     />
                     <label 
                       htmlFor="audit-file-upload"
-                      className="text-sm text-[#4B5563] font-bold flex items-center justify-center gap-3 w-full bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 cursor-pointer group-hover:bg-blue-100/50 group-hover:border-blue-400 transition-all"
+                      className="text-sm text-[#4B5563] font-medium flex items-center justify-center gap-3 w-full bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 cursor-pointer group-hover:bg-blue-100/50 group-hover:border-blue-400 transition-all"
                     >
                       <Paperclip size={20} className="text-blue-500" />
                       <div className="text-left">
-                        <p className="text-sm font-black text-blue-900">{formData.attachmentName || 'Click to upload audit files'}</p>
-                        <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-0.5">PDF, DOCX or ZIP up to 10MB</p>
+                        <p className="text-sm font-medium text-blue-900">{formData.attachmentName || 'Click to upload audit files'}</p>
+                        <p className="text-[10px] text-blue-400 font-normal uppercase tracking-widest mt-0.5">PDF, DOCX or ZIP up to 10MB</p>
                       </div>
                     </label>
                   </div>
                 </div>
 
                 <div className="flex gap-4 pt-6 border-t border-gray-100">
-                  <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
-                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#172554] shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                  <button type="button" onClick={() => handleSavePlan(null, false)} className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl font-medium text-gray-500 hover:bg-gray-50 transition-all text-sm uppercase tracking-widest">Draft</button>
+                  <button type="button" onClick={(e) => handleSavePlan(null, true)} className="flex-[1.5] px-6 py-3.5 bg-[#172554] text-white rounded-2xl font-medium hover:bg-[#172554] shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
                     <CheckCircle2 size={20} />
                     {editingId ? 'Save Changes' : 'Create'}
                   </button>

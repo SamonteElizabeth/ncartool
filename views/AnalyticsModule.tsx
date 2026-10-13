@@ -145,7 +145,7 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
 
   // TAT by Audit Type Data
   const tatByAuditTypeData = useMemo(() => {
-    const types: AuditType[] = ['Quality/InfoSec', 'Financial', 'Special Request'];
+    const types: AuditType[] = ['QMS', 'ISMS', 'Quality/InfoSec', 'Financial', 'Special Request'];
     return types.map(type => {
       const typeNCARs = ncars.filter(n => n.auditType === type && n.responseAt);
       const responseTimes = typeNCARs.map(n => {
@@ -566,6 +566,8 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
               className="bg-transparent border-none text-sm text-gray-700 outline-none cursor-pointer appearance-none pr-8 font-medium"
             >
               <option value="All">All Audit Types</option>
+              <option value="QMS">QMS</option>
+              <option value="ISMS">ISMS</option>
               <option value="Quality/InfoSec">Quality/InfoSec</option>
               <option value="Financial">Financial</option>
               <option value="Special Request">Special Request</option>

@@ -62,7 +62,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
-  const isLead = role === 'LEAD_AUDITOR';
+  const isLead = role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER';
   const isAuditee = role === 'AUDITEE';
 
   useEffect(() => {
@@ -109,11 +109,12 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
 
   const filteredItems = useMemo(() => {
     return ncars.filter(ncar => {
-      const isValidatable = 
-        ncar.status === NCARStatus.FOR_APPROVAL || 
+      const isValidatable = !ncar.assignedByAuditReportId && (
+        ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED ||
+        ncar.status === NCARStatus.CAP_LEAD_APPROVED ||
         ncar.status === NCARStatus.CLOSED || 
         ncar.status === NCARStatus.REOPENED ||
-        ncar.status === NCARStatus.REJECTED;
+        ncar.status === NCARStatus.REJECTED);
 
       if (!isValidatable) return false;
 
@@ -126,7 +127,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
       if (statusFilter === 'All') {
         matchesStatus = true;
       } else if (statusFilter === 'Pending') {
-        matchesStatus = ncar.status === NCARStatus.FOR_APPROVAL;
+        matchesStatus = ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED;
       } else if (statusFilter === 'Approved') {
         matchesStatus = ncar.status === NCARStatus.CLOSED || ncar.status === NCARStatus.VALIDATED;
       } else if (statusFilter === 'Rejected') {
@@ -143,8 +144,8 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
 
   const handleApprove = (id: string) => {
     if (!isLead) return;
-    setNcars(prev => prev.map(n => n.id === id ? { ...n, status: NCARStatus.CLOSED, rejectionRemarks: undefined } : n));
-    onNotify(`NCAR ${id} Verified & Closed.`, 'success');
+    setNcars(prev => prev.map(n => n.id === id ? { ...n, status: NCARStatus.CAP_LEAD_APPROVED, rejectionRemarks: undefined } : n));
+    onNotify(`NCAR ${id} approved by the Lead Auditor and sent to the Head Manager for final approval.`, 'success');
     setViewingNCARId(null);
   };
 
@@ -176,7 +177,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
     };
 
     setActionPlans(prev => [...prev.filter(ap => ap.ncarId !== viewingNCARId), newAP]);
-    setNcars(prev => prev.map(n => n.id === viewingNCARId ? { ...n, status: NCARStatus.FOR_APPROVAL, rejectionRemarks: undefined } : n));
+    setNcars(prev => prev.map(n => n.id === viewingNCARId ? { ...n, status: NCARStatus.ACTION_PLAN_SUBMITTED, responseAt: n.responseAt || new Date().toISOString(), responseSla: n.responseSla ? { ...n.responseSla, status: 'Submitted' } : undefined, rejectionRemarks: undefined } : n));
 
     onNotify(`Action Plan for ${viewingNCARId} resubmitted successfully.`, 'success');
     handleCloseModal();
@@ -194,13 +195,13 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
     setApFormData(initialApFormData);
   };
 
-  const pendingCount = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length;
-  const validatableNCARs = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED);
+  const pendingCount = ncars.filter(n => !n.assignedByAuditReportId && [NCARStatus.ACTION_PLAN_SUBMITTED, NCARStatus.CAP_LEAD_APPROVED].includes(n.status)).length;
+  const validatableNCARs = ncars.filter(n => !n.assignedByAuditReportId && (n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED));
   const statusOptions = [
     { label: 'All', title: 'All Status', count: validatableNCARs.length },
     { label: 'Approved', title: 'Approved', count: validatableNCARs.filter(n => n.status === NCARStatus.CLOSED || n.status === NCARStatus.VALIDATED).length },
     { label: 'Rejected', title: 'Rejected', count: validatableNCARs.filter(n => n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED).length },
-    { label: 'Pending', title: 'Pending', count: validatableNCARs.filter(n => n.status === NCARStatus.FOR_APPROVAL).length }
+    { label: 'Pending', title: 'Pending', count: validatableNCARs.filter(n => n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED).length }
   ];
   const statusCards = statusOptions.map(({ label, title, count }) => {
     const selected = statusFilter === label;
@@ -220,7 +221,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
         type="button"
         onClick={() => setStatusFilter(label)}
         aria-pressed={selected}
-        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? palette.selected : 'border-[#e7e5e4]'}`}
+        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-[#fffef5] px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? 'border-indigo-200 ring-2 ring-indigo-100' : 'border-[#efe5d3]'}`}
       >
         <span className={`absolute inset-x-0 top-0 h-1 ${palette.stripe}`} />
         <span className="flex min-w-0 items-center justify-between gap-2">
@@ -239,7 +240,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
     <div className="space-y-5 text-base relative">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">AP Validation</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">CAP Validation</h3>
         </div>
         <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 flex items-center gap-3">
           <div className="w-3 h-3 bg-[#172554] rounded-full animate-pulse"></div>
@@ -247,7 +248,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
         </div>
       </div>
 
-      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="rounded-2xl border border-[#f3e7d3] bg-[#fff8e9] p-2 shadow-sm">
         <div className="grid w-full grid-cols-2 auto-rows-fr items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-4" role="group" aria-label="Filter by validation status">
           {statusCards}
         </div>
@@ -317,7 +318,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                       <div className="text-sm font-normal text-gray-600">{new Date(n.deadline).toLocaleDateString()}</div>
                       <div className="text-xs font-medium text-[#172554] uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
                     </td>
-                    <td className="px-5 py-4 text-center"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-[#172554] border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Required' : n.status))}</span></td>
+                    <td className="px-5 py-4 text-center"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.REOPENED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.ACTION_PLAN_SUBMITTED ? 'bg-blue-50 text-[#172554] border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.ACTION_PLAN_SUBMITTED ? 'Review Required' : n.status))}</span></td>
                     <td className="px-5 py-4 text-center">
                       {(() => {
                         const tooltipText = isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) 
@@ -432,7 +433,7 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                       <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
                         <div className="text-xs font-bold text-gray-400">Audit Ref: <span className="text-blue-500 font-black">{n.auditPlanId}</span></div>
                         <div className="flex gap-4">
-                          {isLead && n.status === NCARStatus.FOR_APPROVAL && (
+                          {isLead && n.status === NCARStatus.ACTION_PLAN_SUBMITTED && (
                             <><button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50"><XCircle size={18} />Reject</button><button onClick={() => handleApprove(n.id)} className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest"><CheckCircle2 size={18} />Approve</button></>
                           )}
                           {isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) && (

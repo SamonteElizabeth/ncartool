@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { NCAR, NCARStatus, Role, ActionPlan } from '../types';
+import { NCAR, NCARStatus, Role, ActionPlan, User as UserRecord } from '../types';
+import { getConfiguredPhilippineHolidays, getResponseSlaStatus, hasSubmittedNCARResponse, makeResponseSla } from '../utils/ncarSla';
 import { 
   AlertTriangle, 
   User, 
@@ -13,6 +14,7 @@ import {
   Edit3, 
   Save, 
   Eye, 
+  ScanEye,
   ArrowRight,
   ShieldAlert,
   FileUp,
@@ -27,7 +29,11 @@ import {
   RefreshCcw,
   PlusCircle,
   Eraser,
-  Trash2
+  Trash2,
+  ClipboardList,
+  CircleCheck,
+  CircleX,
+  Clock3,
 } from 'lucide-react';
 
 interface NCARModuleProps {
@@ -36,6 +42,8 @@ interface NCARModuleProps {
   actionPlans: ActionPlan[];
   setActionPlans: React.Dispatch<React.SetStateAction<ActionPlan[]>>;
   role: Role;
+  users: UserRecord[];
+  issuingAuditor: string;
   onNotify: (msg: string, type?: 'info' | 'success' | 'warning') => void;
   setActiveModule?: (module: string) => void;
 }
@@ -44,18 +52,14 @@ const FINDING_AREAS = [
   'DISD', 'TSD', 'TASS', 'IA', 'MSP', 'CSS', 'DCFI', 'BTSG', 'EEM'
 ];
 
-const REQUIREMENTS = [
-  'ISO 27001 Clause 8.1', 'ISO 27001 Clause A.9.4', 'ISO 9001 Clause 4.4',
-  'ISO 9001 Clause 9.2', 'ISO 14001 Clause 6.1', 'Financial Policy Section 4.2',
-  'IT Security Policy v2.1', 'Employee Handbook Sec 5'
-];
-
 const NCARModule: React.FC<NCARModuleProps> = ({ 
   ncars, 
   setNcars, 
   actionPlans, 
   setActionPlans, 
   role, 
+  users,
+  issuingAuditor,
   onNotify, 
   setActiveModule 
 }) => {
@@ -74,36 +78,98 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
   const isAuditee = role === 'AUDITEE';
   const isLead = role === 'LEAD_AUDITOR';
+  const isHeadManager = role === 'HEAD_MANAGER';
   const isAuditor = role === 'AUDITOR';
+  const canEditCAP = isAuditee && Boolean(viewingNCAR && [NCARStatus.PART1_SUBMITTED, NCARStatus.APPROVED, NCARStatus.VALIDATED, NCARStatus.REOPENED].includes(viewingNCAR.status));
   const canCreate = role === 'LEAD_AUDITOR' || role === 'AUDITOR';
+  const isLeadReview = isLead && viewingNCAR?.createdByRole !== 'LEAD_AUDITOR' && viewingNCAR?.status === NCARStatus.FOR_APPROVAL;
+  const isManagerReview = isHeadManager && (viewingNCAR?.createdByRole === 'LEAD_AUDITOR' ? viewingNCAR?.status === NCARStatus.FOR_APPROVAL : viewingNCAR?.status === NCARStatus.LEAD_APPROVED);
+  const canApproveNCAR = Boolean(isLeadReview || isManagerReview);
+  const isLeadCAPReview = isLead && viewingNCAR?.status === NCARStatus.ACTION_PLAN_SUBMITTED;
+  const isManagerCAPReview = isHeadManager && viewingNCAR?.status === NCARStatus.CAP_LEAD_APPROVED;
+  const canApproveCAP = Boolean((isLeadCAPReview || isManagerCAPReview) && !viewingNCAR?.assignedByAuditReportId);
+  const canEditNCAR = isLead || isHeadManager || (canCreate && (!viewingNCAR || viewingNCAR.status === NCARStatus.DRAFT));
+  const isReadOnlyFinding = Boolean(viewingNCAR && !canEditNCAR);
+  const isPendingPart2 = (ncar: NCAR) => {
+    const plan = actionPlans.find(actionPlan => actionPlan.ncarId === ncar.id);
+    const readyForPart2 = [NCARStatus.PART1_SUBMITTED, NCARStatus.APPROVED, NCARStatus.VALIDATED, NCARStatus.REOPENED].includes(ncar.status);
+    return readyForPart2 && (!plan || plan.isDraft === true);
+  };
+  const getNCARTableStatus = (ncar: NCAR): 'Pending' | 'Approved' | 'Rejected' => {
+    if (ncar.status === NCARStatus.REJECTED || ncar.status === NCARStatus.REOPENED) return 'Rejected';
+    if (isPendingPart2(ncar)) return 'Pending';
+    if ([NCARStatus.APPROVED, NCARStatus.VALIDATED, NCARStatus.ACTION_PLAN_SUBMITTED, NCARStatus.CAP_LEAD_APPROVED, NCARStatus.CLOSED].includes(ncar.status)) return 'Approved';
+    return 'Pending';
+  };
 
   const getInitialDueDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const getToday = () => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  };
+
+  const getInitialResponseDueDate = (issueDate = getToday()) => {
+    if (!issueDate) return '';
+    const [year, month, day] = issueDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return '';
+    let weekdaysAdded = 0;
+    while (weekdaysAdded < 5) {
+      date.setDate(date.getDate() + 1);
+      if (date.getDay() !== 0 && date.getDay() !== 6) weekdaysAdded += 1;
+    }
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
   const initialFormData = {
     type: 'Major' as 'Major' | 'Minor' | 'OFI',
-    area: FINDING_AREAS[0],
-    clause: REQUIREMENTS[0],
+    systemType: 'QMS' as 'QMS/ISMS' | 'QMS' | 'ISMS' | 'Business',
+    requirement: '',
+    clause: '',
     statement: '',
     evidence: '',
-    auditee: 'Bob Johnson',
-    attachmentName: '',
-    dueDate: getInitialDueDate(),
-    auditType: 'Quality/InfoSec' as NCAR['auditType'],
-    processName: ''
+    managerResponsible: '',
+    departmentResponsible: '',
+    issueDate: getToday(),
+    dueDate: getInitialResponseDueDate(),
+    processName: '',
+    issuingAuditor
   };
 
   const [formData, setFormData] = useState(initialFormData);
+
+  const getGeneratedNCARNumber = (systemType = formData.systemType, issueDate = formData.issueDate) => {
+    const year = issueDate ? issueDate.slice(0, 4) : String(new Date().getFullYear());
+    const typeCode = systemType === 'Business' ? 'BUS' : 'QIS';
+    const prefix = `NCAR${year}-${typeCode}-01-N`;
+    const existingNumbers = ncars
+      .filter(ncar => ncar.id.startsWith(prefix))
+      .map(ncar => Number(ncar.id.slice(prefix.length)))
+      .filter(Number.isFinite);
+    const nextNumber = Math.max(0, ...existingNumbers) + 1;
+    return `${prefix}${String(nextNumber).padStart(2, '0')}`;
+  };
 
   const initialApFormData = {
     correction: '',
     rootCause: '',
     actionPlan: '',
-    responsible: 'Bob Johnson',
+    responsible: '',
+    correctionResponsible: '',
+    correctionAdditionalAuditeeResponsible: '',
     dueDate: getInitialDueDate(),
+    correctionTargetDate: '',
+    responseDate: getToday(),
+    consequenceImpact: '',
+    canOccurElsewhere: 'No' as 'Yes' | 'No',
+    elsewhereDetails: '',
+    capTargetDate: '',
+    additionalAuditeeResponsible: '',
     attachmentName: ''
   };
 
@@ -119,6 +185,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!viewingNCAR) return;
+    const latest = ncars.find(ncar => ncar.id === viewingNCAR.id);
+    if (latest && latest !== viewingNCAR) setViewingNCAR(latest);
+  }, [ncars, viewingNCAR?.id]);
+
   const getDaysRemaining = (deadline: string) => {
     if (!deadline) return 0;
     const d = new Date(deadline);
@@ -132,15 +204,17 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     setViewingNCAR(ncar);
     setFormData({
       type: ncar.findingType,
-      area: ncar.area,
-      clause: ncar.requirement,
+      systemType: ncar.systemType || (ncar.auditType === 'Financial' ? 'Business' : 'QMS/ISMS'),
+      requirement: ncar.requirement,
+      clause: ncar.clauseNumber || ncar.standardClause || '',
       statement: ncar.statement,
       evidence: ncar.evidence,
-      auditee: ncar.auditee,
-      attachmentName: ncar.attachmentName || '',
+      managerResponsible: ncar.managerResponsible || ncar.auditee || '',
+      departmentResponsible: ncar.departmentResponsible || ncar.area || '',
       dueDate: ncar.deadline.split('T')[0],
-      auditType: ncar.auditType,
-      processName: ncar.processName
+      issueDate: ncar.issueDate || ncar.createdAt.split('T')[0],
+      processName: ncar.processInvolved || ncar.processName,
+      issuingAuditor: ncar.issuingAuditor || ncar.auditor
     });
 
     const existingAp = actionPlans.find(ap => ap.ncarId === ncar.id);
@@ -149,15 +223,28 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         correction: existingAp.immediateCorrection,
         rootCause: existingAp.rootCause,
         actionPlan: existingAp.correctiveAction,
-        responsible: existingAp.responsiblePerson,
-        dueDate: existingAp.dueDate,
+        responsible: existingAp.capResponsible || existingAp.responsiblePerson,
+        correctionResponsible: existingAp.correctionResponsible || '',
+        correctionAdditionalAuditeeResponsible: existingAp.correctionAdditionalAuditeeResponsible || '',
+        dueDate: existingAp.capTargetDate || existingAp.dueDate,
+        correctionTargetDate: existingAp.correctionTargetDate || '',
+        responseDate: existingAp.responseDate || getToday(),
+        consequenceImpact: existingAp.consequenceImpact || '',
+        canOccurElsewhere: existingAp.canOccurElsewhere || 'No',
+        elsewhereDetails: existingAp.elsewhereDetails || '',
+        capTargetDate: existingAp.capTargetDate || '',
+        additionalAuditeeResponsible: existingAp.additionalAuditeeResponsible || '',
         attachmentName: existingAp.remarks || ''
       });
     } else {
-      setApFormData(initialApFormData);
+      setApFormData({
+        ...initialApFormData,
+        responsible: ncar.managerResponsible || ncar.auditee || '',
+        correctionResponsible: ncar.managerResponsible || ncar.auditee || ''
+      });
     }
 
-    setIsCreatingActionPlan(false);
+    setIsCreatingActionPlan(!isAuditee && (ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED));
     setShowForm(true);
   };
 
@@ -168,10 +255,41 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     onNotify(`NCAR ${ncar.id} and its linked action plan deleted.`, 'success');
   };
 
+  const handleEscalate = (ncar: NCAR) => {
+    if (role !== 'LEAD_AUDITOR' || getResponseSlaStatus(ncar) !== 'Overdue' || ncar.isEscalated) return;
+    const escalatedAt = new Date().toISOString();
+    const leadAuditor = issuingAuditor.trim();
+    if (!leadAuditor) {
+      onNotify('The Lead Auditor name is unavailable. Sign in again before escalating this NCAR.', 'warning');
+      return;
+    }
+    setNcars(current => current.map(item => item.id === ncar.id ? {
+      ...item,
+      isEscalated: true,
+      escalationStatus: 'Successfully Escalated to EEM',
+      escalatedAt,
+      escalatedBy: leadAuditor
+    } : item));
+    onNotify(`NCAR ${ncar.id} successfully escalated to EEM for tracking by ${leadAuditor}.`, 'success');
+  };
+
   const handleApprove = () => {
-    if (!viewingNCAR || !isLead) return;
-    setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: NCARStatus.CLOSED, rejectionRemarks: undefined } : n));
-    onNotify(`NCAR ${viewingNCAR.id} Approved and Closed.`, 'success');
+    if (!viewingNCAR || !canApproveNCAR) return;
+    const nextStatus = isLeadReview ? NCARStatus.LEAD_APPROVED : NCARStatus.APPROVED;
+    const assignedAt = nextStatus === NCARStatus.APPROVED ? (viewingNCAR.assignedAt || new Date().toISOString()) : viewingNCAR.assignedAt;
+    const responseSla = nextStatus === NCARStatus.APPROVED && viewingNCAR.findingType !== 'OFI'
+      ? viewingNCAR.responseSla || makeResponseSla(assignedAt!, getConfiguredPhilippineHolidays())
+      : viewingNCAR.responseSla;
+    setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: nextStatus, ...(assignedAt ? { assignedAt } : {}), ...(responseSla ? { responseSla, deadline: responseSla.dueDate } : {}), rejectionRemarks: undefined } : n));
+    onNotify(isLeadReview ? `NCAR ${viewingNCAR.id} validated by Lead Auditor and sent to Head Manager.` : `NCAR ${viewingNCAR.id} approved and assigned to ${viewingNCAR.auditee} for corrective action.`, 'success');
+    closeForm();
+  };
+
+  const handleApproveCAP = () => {
+    if (!viewingNCAR || !canApproveCAP) return;
+    const nextStatus = isLeadCAPReview ? NCARStatus.CAP_LEAD_APPROVED : NCARStatus.CLOSED;
+    setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: nextStatus, rejectionRemarks: undefined } : n));
+    onNotify(isLeadCAPReview ? `CAP for ${viewingNCAR.id} approved by Lead Auditor and sent to Head Manager.` : `CAP for ${viewingNCAR.id} finally approved by Head Manager.`, 'success');
     closeForm();
   };
 
@@ -181,93 +299,160 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
   const finalizeRejection = () => {
     if (!viewingNCAR || !rejectionRemarks.trim()) return;
+    const isCAPRejection = viewingNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED || viewingNCAR.status === NCARStatus.CAP_LEAD_APPROVED;
     setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { 
       ...n, 
-      status: NCARStatus.REOPENED,
+      status: isCAPRejection ? NCARStatus.REOPENED : NCARStatus.REJECTED,
       rejectionRemarks: rejectionRemarks
     } : n));
-    onNotify(`NCAR ${viewingNCAR.id} Rejected: ${rejectionRemarks}`, 'warning');
+    onNotify(`${isCAPRejection ? 'CAP' : 'NCAR'} ${viewingNCAR.id} Rejected: ${rejectionRemarks}`, 'warning');
     setShowRejectModal(false);
     setRejectionRemarks('');
     closeForm();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFormData({ ...formData, attachmentName: e.target.files[0].name });
+  const saveNCAR = (status: NCARStatus.DRAFT | NCARStatus.FOR_APPROVAL) => {
+    if (!canCreate && !(viewingNCAR && canEditNCAR)) return;
+    const now = new Date();
+    const submittingPart1 = status === NCARStatus.FOR_APPROVAL;
+    const submittedStatus = submittingPart1 ? NCARStatus.PART1_SUBMITTED : NCARStatus.DRAFT;
+    const ncarNumber = viewingNCAR?.id || getGeneratedNCARNumber();
+    if (viewingNCAR) {
+      const assignedAt = submittingPart1 ? viewingNCAR.assignedAt || now.toISOString() : viewingNCAR.assignedAt;
+      const responseSla = submittingPart1 ? viewingNCAR.responseSla || makeResponseSla(assignedAt!, getConfiguredPhilippineHolidays()) : viewingNCAR.responseSla;
+      setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? {
+        ...n,
+        status: viewingNCAR.status === NCARStatus.DRAFT ? submittedStatus : viewingNCAR.status,
+        statement: formData.statement,
+        requirement: formData.requirement,
+        evidence: formData.evidence,
+        findingType: formData.type,
+        standardClause: formData.clause,
+        clauseNumber: formData.clause,
+        systemType: formData.systemType,
+        issueDate: formData.issueDate,
+        processInvolved: formData.processName,
+        managerResponsible: formData.managerResponsible,
+        departmentResponsible: formData.departmentResponsible,
+        issuingAuditor: formData.issuingAuditor,
+        area: formData.departmentResponsible,
+        auditee: formData.managerResponsible,
+        auditor: formData.issuingAuditor,
+        deadline: formData.dueDate,
+        processName: formData.processName,
+        ...(assignedAt ? { assignedAt } : {}),
+        ...(responseSla ? { responseSla, deadline: responseSla.dueDate } : {})
+      } : n));
+    } else {
+      const assignedAt = submittingPart1 ? now.toISOString() : undefined;
+      const responseSla = assignedAt ? makeResponseSla(assignedAt, getConfiguredPhilippineHolidays()) : undefined;
+      const newNCAR: NCAR = {
+        id: ncarNumber,
+        auditPlanId: 'AP_UNKNOWN',
+        statement: formData.statement,
+        requirement: formData.requirement,
+        evidence: formData.evidence,
+        findingType: formData.type,
+        standardClause: formData.clause,
+        clauseNumber: formData.clause,
+        area: formData.departmentResponsible,
+        auditor: formData.issuingAuditor,
+        auditee: formData.managerResponsible,
+        createdAt: now.toISOString(),
+        status: submittedStatus,
+        deadline: responseSla?.dueDate || formData.dueDate,
+        auditType: formData.systemType === 'Business' ? 'Financial' : 'Quality/InfoSec',
+        processName: formData.processName,
+        isEscalated: false,
+        systemType: formData.systemType,
+        issueDate: formData.issueDate,
+        processInvolved: formData.processName,
+        managerResponsible: formData.managerResponsible,
+        departmentResponsible: formData.departmentResponsible,
+        issuingAuditor: formData.issuingAuditor,
+        createdByRole: role,
+        ...(assignedAt ? { assignedAt } : {}),
+        ...(responseSla ? { responseSla } : {})
+      };
+      setNcars(prev => [newNCAR, ...prev]);
     }
+    onNotify(viewingNCAR && viewingNCAR.status !== NCARStatus.DRAFT ? `NCAR ${ncarNumber} changes saved.` : status === NCARStatus.DRAFT ? `NCAR ${ncarNumber} saved as draft.` : `NCAR ${ncarNumber} Part 1 submitted. The 5 working day Part 2 SLA has started.`, 'success');
+    closeForm();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isAuditee || !formData.statement || !formData.evidence) return;
+    saveNCAR(NCARStatus.FOR_APPROVAL);
+  };
 
-    const now = new Date();
-    if (viewingNCAR) {
-      setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? {
-        ...n,
-        statement: formData.statement,
-        requirement: formData.clause,
-        evidence: formData.evidence,
-        findingType: formData.type,
-        standardClause: formData.clause.split(' ').pop() || '8.1',
-        area: formData.area,
-        auditee: formData.auditee,
-        attachmentName: formData.attachmentName,
-        deadline: formData.dueDate,
-        auditType: formData.auditType,
-        processName: formData.processName
-      } : n));
-      onNotify(`NCAR ${viewingNCAR.id} updated.`, 'success');
-    } else {
-      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const newNCAR: NCAR = {
-        id: `NCAR_${String(ncars.length + 1).padStart(6, '0')}_${timestamp}`,
-        auditPlanId: 'AP_UNKNOWN',
-        statement: formData.statement,
-        requirement: formData.clause,
-        evidence: formData.evidence,
-        findingType: formData.type,
-        standardClause: formData.clause.split(' ').pop() || '8.1',
-        area: formData.area,
-        auditor: 'Current User',
-        auditee: formData.auditee,
-        createdAt: now.toISOString(),
-        status: NCARStatus.PENDING,
-        deadline: formData.dueDate,
-        attachmentName: formData.attachmentName,
-        auditType: formData.auditType,
-        processName: formData.processName,
-        isEscalated: false
-      };
-      setNcars(prev => [newNCAR, ...prev]);
-      onNotify('NCAR raised and assigned.', 'success');
-    }
-    closeForm();
-  }
+  const handleSaveDraft = () => saveNCAR(NCARStatus.DRAFT);
 
-  const handleApSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveActionPlan = (isDraft: boolean) => {
     if (!viewingNCAR) return;
+    if (!isDraft) {
+      const missingFields = [
+        ['Response Date', apFormData.responseDate],
+        ['Consequence / Impact', apFormData.consequenceImpact],
+        ['Immediate Correction', apFormData.correction],
+        ['Correction Responsible Person', apFormData.correctionResponsible],
+        ['Correction Target Date', apFormData.correctionTargetDate],
+        ['Root Cause Analysis', apFormData.rootCause],
+        ['Corrective Action Plan', apFormData.actionPlan],
+        ['CAP Responsible Person', apFormData.responsible],
+        ['CAP Target Date', apFormData.capTargetDate]
+      ].filter(([, value]) => !String(value || '').trim()).map(([label]) => label);
+      if (apFormData.canOccurElsewhere === 'Yes' && !apFormData.elsewhereDetails.trim()) missingFields.push('Elsewhere Details');
+      if (missingFields.length) {
+        onNotify(`Complete the required Part 2 fields: ${missingFields.join(', ')}.`, 'warning');
+        return;
+      }
+    }
+    const additionalAuditee = apFormData.additionalAuditeeResponsible.trim();
+    const correctionAdditionalAuditee = apFormData.correctionAdditionalAuditeeResponsible.trim();
+    const isAuditeeUser = (name: string) => users.some(user => user.role === 'AUDITEE' && user.name.toLowerCase() === name.toLowerCase());
+    if ((additionalAuditee && !isAuditeeUser(additionalAuditee)) || (correctionAdditionalAuditee && !isAuditeeUser(correctionAdditionalAuditee))) {
+      onNotify('Choose an existing user with the Auditee role for each additional responsible person.', 'warning');
+      return;
+    }
 
     const now = new Date();
     const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const existingPlan = actionPlans.find(ap => ap.ncarId === viewingNCAR.id);
     const newAP: ActionPlan = {
-      id: `ACT_${String(actionPlans.length + 1).padStart(6, '0')}_${timestamp}`,
+      id: existingPlan?.id || `ACT_${String(actionPlans.length + 1).padStart(6, '0')}_${timestamp}`,
       ncarId: viewingNCAR.id,
       immediateCorrection: apFormData.correction,
       responsiblePerson: apFormData.responsible,
       rootCause: apFormData.rootCause,
       correctiveAction: apFormData.actionPlan,
-      dueDate: apFormData.dueDate,
-      submittedAt: now.toISOString(),
-      remarks: apFormData.attachmentName
+      dueDate: apFormData.capTargetDate,
+      submittedAt: isDraft ? (existingPlan?.submittedAt || now.toISOString()) : now.toISOString(),
+      remarks: apFormData.attachmentName,
+      responseDate: apFormData.responseDate,
+      consequenceImpact: apFormData.consequenceImpact,
+      correctionResponsible: apFormData.correctionResponsible,
+      correctionAdditionalAuditeeResponsible: correctionAdditionalAuditee,
+      correctionTargetDate: apFormData.correctionTargetDate,
+      canOccurElsewhere: apFormData.canOccurElsewhere,
+      elsewhereDetails: apFormData.elsewhereDetails,
+      capResponsible: apFormData.responsible,
+      additionalAuditeeResponsible: additionalAuditee,
+      capTargetDate: apFormData.capTargetDate,
+      isDraft
     };
 
     setActionPlans(prev => [...prev.filter(ap => ap.ncarId !== viewingNCAR.id), newAP]);
-    setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: NCARStatus.FOR_APPROVAL, rejectionRemarks: undefined } : n));
-    onNotify(`Action Plan for ${viewingNCAR.id} submitted successfully.`, 'success');
+    if (!isDraft) setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: NCARStatus.ACTION_PLAN_SUBMITTED, responseAt: n.responseAt || new Date().toISOString(), responseSla: n.responseSla ? { ...n.responseSla, status: 'Submitted' } : undefined, rejectionRemarks: undefined } : n));
+    else if (viewingNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED || viewingNCAR.status === NCARStatus.CAP_LEAD_APPROVED) {
+      setNcars(prev => prev.map(n => n.id === viewingNCAR.id ? { ...n, status: NCARStatus.APPROVED } : n));
+    }
+    onNotify(isDraft ? `CAP for ${viewingNCAR.id} saved as a draft.` : `CAP for ${viewingNCAR.id} submitted successfully.`, 'success');
     closeForm();
+  };
+
+  const handleApSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveActionPlan(false);
   };
 
   const handleApFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,8 +475,10 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     onNotify("Started a fresh action plan draft.", "info");
   };
 
+  const ncarFindings = useMemo(() => ncars.filter(ncar => ncar.findingType !== 'OFI'), [ncars]);
   const filteredNCARs = useMemo(() => {
-    return ncars.filter(ncar => {
+    return ncarFindings.filter(ncar => {
+      if (isAuditee && (ncar.managerResponsible || ncar.auditee || '').toLowerCase() !== issuingAuditor.toLowerCase()) return false;
       const responsible = actionPlans.find(a => a.ncarId === ncar.id)?.responsiblePerson || ncar.auditee || '';
       const matchesSearch = ncar.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             ncar.requirement.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -301,15 +488,17 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                             responsible.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesStatus = statusFilter === 'All Status';
-        if (!matchesStatus) {
+      if (!matchesStatus) {
         if (statusFilter === 'Pending') {
-          matchesStatus = ncar.status === NCARStatus.PENDING || ncar.status === NCARStatus.REOPENED;
+          matchesStatus = isPendingPart2(ncar);
+        } else if (statusFilter === 'Draft') {
+          matchesStatus = ncar.status === NCARStatus.DRAFT;
         } else if (statusFilter === 'For Approval') {
-          matchesStatus = ncar.status === NCARStatus.FOR_APPROVAL;
+          matchesStatus = ncar.status === NCARStatus.FOR_APPROVAL || ncar.status === NCARStatus.LEAD_APPROVED || ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED;
         } else if (statusFilter === 'Rejected') {
           matchesStatus = ncar.status === NCARStatus.REJECTED || ncar.status === NCARStatus.REOPENED;
         } else if (statusFilter === 'Approved') {
-          matchesStatus = ncar.status === NCARStatus.VALIDATED || ncar.status === NCARStatus.CLOSED;
+          matchesStatus = !isPendingPart2(ncar) && [NCARStatus.APPROVED, NCARStatus.VALIDATED, NCARStatus.ACTION_PLAN_SUBMITTED, NCARStatus.CAP_LEAD_APPROVED, NCARStatus.CLOSED].includes(ncar.status);
         } else if (statusFilter === 'Closed') {
           matchesStatus = ncar.status === NCARStatus.CLOSED;
         }
@@ -318,22 +507,47 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       const matchesType = typeFilters.length === 0 || typeFilters.includes(ncar.findingType);
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [ncars, searchQuery, statusFilter, typeFilters]);
+  }, [ncarFindings, actionPlans, searchQuery, statusFilter, typeFilters, isAuditee, issuingAuditor]);
+
+  const summaryCards = [
+    { label: 'All Status', count: ncarFindings.length, caption: 'All NCARs in the register', icon: ClipboardList, color: 'blue', filter: 'All Status' },
+    { label: 'Approved', count: ncarFindings.filter(ncar => !isPendingPart2(ncar) && [NCARStatus.APPROVED, NCARStatus.VALIDATED, NCARStatus.ACTION_PLAN_SUBMITTED, NCARStatus.CAP_LEAD_APPROVED, NCARStatus.CLOSED].includes(ncar.status)).length, caption: 'NCAR approved; Part 2 submitted or closed', icon: CircleCheck, color: 'green', filter: 'Approved' },
+    { label: 'Rejected', count: ncarFindings.filter(ncar => [NCARStatus.REJECTED, NCARStatus.REOPENED].includes(ncar.status)).length, caption: 'Requires revision', icon: CircleX, color: 'red', filter: 'Rejected' },
+    { label: 'Pending', count: ncarFindings.filter(isPendingPart2).length, caption: 'Part 2: corrective action not submitted', icon: Clock3, color: 'orange', filter: 'Pending' }
+  ] as const;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">NCARs</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">NCAR</h3>
         </div>
-        {canCreate && (
-          <button 
-            onClick={() => { setViewingNCAR(null); setFormData(initialFormData); setShowForm(true); }}
-            className="flex items-center gap-2 bg-[#172554] hover:bg-[#172554] text-white px-6 py-3 rounded-xl font-black text-sm shadow-xl shadow-blue-200 transition-all"
-          >
-            <Plus size={20} /> NCAR
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canCreate && <button onClick={() => { setViewingNCAR(null); setFormData(initialFormData); setShowForm(true); }} className="flex items-center gap-2 rounded-xl bg-[#172554] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1E3268]"><Plus size={20} /> NCAR</button>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#f3e7d3] bg-[#fff8e9] p-2 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map(({ label, count, caption, icon: Icon, color, filter }) => {
+          const styles = {
+            blue: { border: 'border-[#efe5d3]', icon: 'bg-indigo-50 text-[#172554]', count: 'text-[#172554]', stripe: 'bg-[#172554]' },
+            green: { border: 'border-[#efe5d3]', icon: 'bg-emerald-50 text-emerald-700', count: 'text-gray-900', stripe: 'bg-emerald-500' },
+            red: { border: 'border-[#efe5d3]', icon: 'bg-rose-50 text-rose-600', count: 'text-gray-900', stripe: 'bg-rose-500' },
+            orange: { border: 'border-[#efe5d3]', icon: 'bg-amber-50 text-amber-700', count: 'text-gray-900', stripe: 'bg-orange-400' }
+          }[color];
+          const selected = statusFilter === filter;
+          return (
+            <button key={label} type="button" onClick={() => setStatusFilter(filter)} aria-pressed={selected} className={`group relative flex min-h-[136px] flex-col justify-between overflow-hidden rounded-2xl border bg-[#fffef5] p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${styles.border} ${selected ? 'border-indigo-200 ring-2 ring-indigo-100' : ''}`}>
+              <span className={`absolute inset-x-0 top-0 h-1 ${styles.stripe}`} />
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium text-slate-600">{label}</span>
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}><Icon size={19} /></span>
+              </div>
+              <p className={`text-3xl font-bold leading-none tracking-tight ${styles.count}`}>{count}</p>
+              <p className="truncate text-[11px] text-slate-500">{caption}</p>
+            </button>
+          );
+        })}
       </div>
 
       <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
@@ -370,24 +584,25 @@ const NCARModule: React.FC<NCARModuleProps> = ({
               ))}
             </div>
           )}
-          <select 
+          {!isAuditee && <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
           >
             <option value="All Status">All Status</option>
+            <option value="Draft">Draft</option>
             <option value="Pending">Pending</option>
             <option value="For Approval">For Approval</option>
             <option value="Rejected">Rejected</option>
             <option value="Approved">Approved</option>
             <option value="Closed">Closed</option>
-          </select>
+          </select>}
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[1300px] text-left border-collapse">
             <thead>
               <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">NCAR ID</th>
@@ -396,6 +611,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Finding Type</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Requirement</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Responsible</th>
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Response Date</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Deadline</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Status</th>
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Action</th>
@@ -404,13 +620,17 @@ const NCARModule: React.FC<NCARModuleProps> = ({
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
               {filteredNCARs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-8 py-12 text-center text-gray-400 font-medium text-sm">No NCARs matching criteria</td>
+                  <td colSpan={10} className="px-8 py-12 text-center text-gray-400 font-medium text-sm">No NCARs matching criteria</td>
                 </tr>
               ) : (
                 filteredNCARs.map(ncar => {
                   const ap = actionPlans.find(a => a.ncarId === ncar.id);
                   const responsibleName = ap?.responsiblePerson || ncar.auditee || '-';
                   const initial = responsibleName !== '-' ? responsibleName.charAt(0).toUpperCase() : '?';
+
+                  const slaStatus = getResponseSlaStatus(ncar);
+                  const responseDeadline = ncar.responseSla?.dueDate || (ncar.assignedAt ? ncar.deadline : '');
+                  const slaBadge = slaStatus === 'Overdue' ? 'border-red-200 bg-red-50 text-red-700' : slaStatus === 'Due Soon' ? 'border-amber-200 bg-amber-50 text-amber-700' : slaStatus === 'Submitted' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-100 bg-blue-50 text-blue-700';
 
                   return (
                     <tr key={ncar.id} className="hover:bg-blue-50/20 transition-all group">
@@ -447,27 +667,27 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           </span>
                         </div>
                       </td>
+                      <td className="px-5 py-4 text-center text-sm text-gray-600 whitespace-nowrap">{ap && !ap.isDraft && ap.submittedAt ? new Date(ap.submittedAt).toLocaleDateString() : 'â€”'}</td>
                       <td className="px-5 py-4 text-center">
-                        <div className="text-sm font-normal text-gray-600 whitespace-nowrap">{new Date(ncar.deadline).toLocaleDateString()}</div>
-                        <div className="text-xs font-medium text-[#172554] uppercase mt-0.5 whitespace-nowrap">{getDaysRemaining(ncar.deadline)} days left</div>
+                        <div className="text-sm font-normal text-gray-600 whitespace-nowrap">{responseDeadline ? new Date(`${responseDeadline.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'â€”'}</div>
+                        {slaStatus ? <span className={`mt-1 inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium ${slaBadge}`}>{slaStatus === 'Due Soon' ? 'Due Soon' : slaStatus}</span> : <div className="text-xs font-medium text-[#172554] uppercase mt-0.5 whitespace-nowrap">{responseDeadline ? `${getDaysRemaining(responseDeadline)} days left` : 'Not assigned'}</div>}
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border whitespace-nowrap ${
-                          ncar.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 
-                          ncar.status === NCARStatus.FOR_APPROVAL ? 'bg-blue-50 text-[#172554] border-blue-100' :
-                          ncar.status === NCARStatus.VALIDATED ? 'bg-green-50 text-blue-700 border-blue-200' :
-                          ncar.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : 
-                          ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'
+                        <span className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium uppercase ${
+                          getNCARTableStatus(ncar) === 'Approved' ? 'border-green-200 bg-green-50 text-green-700' :
+                          getNCARTableStatus(ncar) === 'Rejected' ? 'border-red-100 bg-red-50 text-red-600' : 'border-amber-200 bg-amber-50 text-amber-700'
                         }`}>
-                          {ncar.status === NCARStatus.VALIDATED ? 'Approved' : (ncar.status === NCARStatus.REOPENED ? 'Rejected' : ncar.status)}
+                          {getNCARTableStatus(ncar)}
                         </span>
+                        {ncar.isEscalated && <div className="mt-2"><span title={ncar.escalationStatus || 'Successfully Escalated to EEM'} className="inline-flex whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Escalated</span><p className="mt-1 whitespace-nowrap text-[10px] text-gray-500">{ncar.escalatedBy ? `${ncar.escalatedBy} Â· ` : ''}{ncar.escalatedAt ? new Date(ncar.escalatedAt).toLocaleString() : 'Date not recorded'}</p></div>}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="flex justify-center gap-2">
+                          {isLead && slaStatus === 'Overdue' && !ncar.isEscalated && <button type="button" onClick={() => handleEscalate(ncar)} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100" title="Escalate overdue NCAR to EEM for tracking only"><ArrowRight size={15} /> Escalate</button>}
                           {(() => {
                             const tooltipText = isAuditee 
-                              ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? "Revise Action Plan" : "View Finding") 
-                              : "Edit Finding";
+                              ? (ncar.status === NCARStatus.CLOSED ? 'View Closed NCAR and CAP' : 'Open NCAR and CAP form') 
+                              : "Review";
                             return (
                               <>
                               <div className="relative group/tooltip inline-flex justify-center items-center">
@@ -481,7 +701,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                                   title={tooltipText}
                                   aria-label={tooltipText}
                                 >
-                                  {isAuditee ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? <RefreshCcw size={20} /> : <Eye size={20} />) : <Edit3 size={20} />}
+                                  {isAuditee ? (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED ? <RefreshCcw size={20} /> : <Eye size={20} />) : <ScanEye size={20} />}
                                 </button>
                                 <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
                                   <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
@@ -515,8 +735,8 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] shadow-2xl overflow-y-auto animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-5">
+          <div role="dialog" aria-modal="true" aria-labelledby={isCreatingActionPlan ? 'cap-modal-title' : 'ncar-modal-title'} className={`my-auto flex w-full flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200 ${isCreatingActionPlan ? 'max-h-[90vh] max-w-5xl' : isReadOnlyFinding ? 'max-h-[94vh] max-w-6xl' : 'max-h-[94vh] max-w-[94vw]'}`}>
             {!isCreatingActionPlan ? (
               <form onSubmit={handleSubmit} className="text-sm text-[#4B5563] font-medium">
                 <div className="p-6 flex justify-between items-center border-b border-gray-100">
@@ -525,10 +745,10 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                       {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? <RefreshCcw size={24} /> : <Eye size={24} />) : viewingNCAR ? <Edit3 size={24} /> : <AlertTriangle size={24} />}
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-gray-800 tracking-tight">
-                        {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? 'Review & Plan' : 'View Finding Details') : viewingNCAR ? `Edit NCAR: ${viewingNCAR.id}` : 'New NCAR'}
+                      <h4 id="ncar-modal-title" className="text-2xl font-black text-gray-800 tracking-tight">
+                        {isAuditee ? (viewingNCAR?.status === NCARStatus.REOPENED || viewingNCAR?.status === NCARStatus.REJECTED ? 'Review & Plan' : 'View Finding Details') : viewingNCAR ? (viewingNCAR.status === NCARStatus.DRAFT ? 'Edit NCAR Draft' : `NCAR: ${viewingNCAR.id}`) : 'New NCAR'}
                       </h4>
-                      <p className="text-sm text-[#4B5563] font-medium">Audit context and finding severity log.</p>
+                      <p className="text-sm text-[#4B5563] font-medium">NCARTool â€¢ Nonconformity Corrective Action Report</p>
                     </div>
                   </div>
                   <button type="button" onClick={closeForm} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
@@ -536,371 +756,88 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                   </button>
                 </div>
                 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className={`bg-[#F8FAFC] ${isReadOnlyFinding ? 'grid grid-cols-1 items-start gap-3 p-4 lg:grid-cols-2' : 'max-h-[70vh] space-y-5 overflow-y-auto p-6 custom-scrollbar'}`}>
                   {viewingNCAR?.rejectionRemarks && (
-                    <div className="md:col-span-2 bg-red-50 border-2 border-red-100 rounded-2xl p-6 flex items-start gap-5 shadow-sm">
-                      <div className="p-3 bg-red-100 rounded-xl text-red-600">
-                        <MessageSquare size={24} />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-black text-red-400 uppercase tracking-widest block mb-1">Feedback from Lead Auditor</span>
-                        <p className="text-sm font-bold text-red-800 leading-relaxed italic">"{viewingNCAR.rejectionRemarks}"</p>
-                      </div>
+                    <div className={`rounded-xl border border-red-100 bg-red-50 p-4 ${isReadOnlyFinding ? 'lg:col-span-2' : ''}`}>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-600">Review feedback</p>
+                      <p className="text-sm text-red-800">{viewingNCAR.rejectionRemarks}</p>
                     </div>
                   )}
-
-                  <div className="space-y-6">
-                    <div>
-                      <label className="text-sm text-[#4B5563] font-bold">Finding Statement</label>
-                      <textarea 
-                        readOnly={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                        required
-                        value={formData.statement}
-                        onChange={(e) => setFormData({...formData, statement: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                      ></textarea>
+                  <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+                    <h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">NCAR Details</h5>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>NCAR Number</span><input readOnly value={viewingNCAR?.id || getGeneratedNCARNumber()} className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm text-gray-700" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Management System Type</span><select required disabled={!canEditNCAR} value={formData.systemType} onChange={e => setFormData({...formData, systemType: e.target.value as typeof formData.systemType})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"><option value="QMS">QMS</option><option value="ISMS">ISMS</option><option value="QMS/ISMS">QMS/ISMS (legacy)</option><option value="Business">Business</option></select></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>ISO/Business Requirement</span><input required value={formData.requirement} onChange={e => setFormData({...formData, requirement: e.target.value})} placeholder="e.g. ISO 9001:2015 requirements" disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Finding Type</span><select required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as typeof formData.type})} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"><option value="Major">Major</option><option value="Minor">Minor</option><option value="OFI">OFI</option></select></label>
                     </div>
-                    <div>
-                      <label className="text-sm text-[#4B5563] font-bold">Objective Evidence</label>
-                      <textarea 
-                        readOnly={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                        required
-                        value={formData.evidence}
-                        onChange={(e) => setFormData({...formData, evidence: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                      ></textarea>
+                  </section>
+                  <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+                    <h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Finding</h5>
+                    <div className="grid grid-cols-1 gap-4">
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Nonconformity</span><textarea required rows={isReadOnlyFinding ? 2 : 3} value={formData.statement} onChange={e => setFormData({...formData, statement: e.target.value})} disabled={!canEditNCAR} className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Evidence</span><textarea required rows={isReadOnlyFinding ? 2 : 3} value={formData.evidence} onChange={e => setFormData({...formData, evidence: e.target.value})} disabled={!canEditNCAR} className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />{viewingNCAR?.evidenceAttachments?.length ? <div className="mt-2 space-y-1">{viewingNCAR.evidenceAttachments.map((file, index) => <a key={`${file.name}-${index}`} href={file.dataUrl} download={file.name} className="block text-xs font-medium text-blue-700 hover:underline">{file.name} ({(file.size / 1024).toFixed(1)} KB)</a>)}</div> : null}</label>
                     </div>
-
-                    <div>
-                      <label className="text-sm text-[#4B5563] font-bold">Attachment</label>
-                      <div className="relative group">
-                        <input 
-                          type="file" 
-                          onChange={handleFileChange}
-                          className="hidden font-normal" 
-                          id="ncar-main-file-upload"
-                          disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                        />
-                        <label 
-                          htmlFor="ncar-main-file-upload"
-                          className={`flex items-center justify-center gap-3 w-full bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-2xl p-6 transition-all ${isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer group-hover:bg-blue-100/50 group-hover:border-blue-400'}`}
-                        >
-                          <Paperclip size={20} className="text-blue-500" />
-                          <div className="text-left">
-                            <p className="text-sm font-black text-blue-900">{formData.attachmentName || 'Click to upload audit files'}</p>
-                            <p className="text-[10px] text-blue-400 uppercase tracking-widest mt-0.5">PDF, DOCX or ZIP up to 10MB</p>
-                          </div>
-                        </label>
-                      </div>
+                  </section>
+                  <section className={`rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 ${isReadOnlyFinding ? 'lg:col-span-2' : ''}`}>
+                    <h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Responsibility & Dates</h5>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Clause</span><input required value={formData.clause} onChange={e => setFormData({...formData, clause: e.target.value})} placeholder="Clause number" disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Issue Date</span><input required type="date" value={formData.issueDate} onChange={e => setFormData({...formData, issueDate: e.target.value, dueDate: getInitialResponseDueDate(e.target.value)})} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Process Involved</span><input required value={formData.processName} onChange={e => setFormData({...formData, processName: e.target.value})} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Manager Responsible</span><input required value={formData.managerResponsible} onChange={e => setFormData({...formData, managerResponsible: e.target.value})} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Department Responsible</span><select required value={formData.departmentResponsible} onChange={e => setFormData({...formData, departmentResponsible: e.target.value})} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"><option value="">Select department</option>{FINDING_AREAS.map(area => <option key={area} value={area}>{area}</option>)}</select></label>
+                      <label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Issuing Auditor</span><input required value={formData.issuingAuditor} onChange={e => setFormData({...formData, issuingAuditor: e.target.value})} readOnly={!viewingNCAR && Boolean(issuingAuditor)} disabled={!canEditNCAR} className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm text-gray-700" /></label>
+                      <div className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span className="block">NCAR Response Due Date</span>{viewingNCAR?.responseSla ? <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-normal text-gray-700 sm:max-w-sm">{viewingNCAR.responseSla.dueDate}</div> : <div className="w-full rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-normal text-gray-500 sm:max-w-sm">Calculated when Part 1 is submitted</div>}<span className="block text-[11px] font-normal text-gray-500">The 5 working day SLA starts when Part 1 is submitted to the Auditee. Weekends and configured Philippine holidays are excluded.</span></div>
+                      {viewingNCAR?.responseSla && <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3 sm:col-span-2"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-medium text-gray-600">Response SLA Status</span><span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getResponseSlaStatus(viewingNCAR) === 'Overdue' ? 'border-red-200 bg-red-50 text-red-700' : getResponseSlaStatus(viewingNCAR) === 'Due Soon' ? 'border-amber-200 bg-amber-50 text-amber-700' : getResponseSlaStatus(viewingNCAR) === 'Submitted' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-100 bg-blue-50 text-blue-700'}`}>{getResponseSlaStatus(viewingNCAR) || viewingNCAR.responseSla.status}</span></div><p className="text-xs text-gray-500">Assigned {new Date(viewingNCAR.responseSla.startedAt).toLocaleString()} Â· Due {viewingNCAR.responseSla.dueDate}</p>{viewingNCAR.responseSla.notificationHistory.length > 0 && <div className="border-t border-gray-200 pt-2"><p className="mb-1 text-xs font-medium text-gray-600">Notification History</p>{viewingNCAR.responseSla.notificationHistory.map((entry, index) => <p key={`${entry.type}-${index}`} className="text-xs text-gray-500">{entry.type === 'due-soon' ? 'Before-deadline reminder' : 'Overdue notification'} Â· {new Date(entry.notifiedAt).toLocaleString()}</p>)}</div>}{viewingNCAR.isEscalated && <div className="border-t border-gray-200 pt-2"><p className="text-xs font-semibold text-emerald-700">{viewingNCAR.escalationStatus || 'Previously escalated'}</p><p className="mt-1 text-xs text-gray-500">{viewingNCAR.escalatedBy ? `Initiated by ${viewingNCAR.escalatedBy}` : 'Initiating Lead Auditor not recorded'}{viewingNCAR.escalatedAt ? ` Â· ${new Date(viewingNCAR.escalatedAt).toLocaleString()}` : ' Â· Date not recorded'}</p></div>}</div>}
                     </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm text-[#4B5563] font-bold">Audit Type</label>
-                        <select 
-                          disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                          value={formData.auditType}
-                          onChange={(e) => setFormData({...formData, auditType: e.target.value as any})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                        >
-                          <option value="" disabled>Select an audit type</option>
-                          <option value="Quality/InfoSec">Quality/InfoSec</option>
-                          <option value="Financial">Financial</option>
-                          <option value="Special Request">Special Request</option>
-                        </select>
-                      </div>
-                    <div className="space-y-2">
-                          <label className="text-sm text-[#4B5563] font-bold">
-                            Process Name
-                          </label>
-                          <select
-                            disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                            value={formData.processName}
-                            onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                          >
-                            <option value="" disabled>
-                              Select a process
-                            </option>
-                            <option value="Access Control">Access Control</option>
-                            <option value="User Management">User Management</option>
-                            <option value="Audit Logging">Audit Logging</option>
-                            <option value="Change Management">Change Management</option>
-                            {/* Add more options as needed */}
-                          </select>
-                        </div>
-                        </div> 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm text-[#4B5563] font-bold">Finding Type</label>
-                        <select 
-                          disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                          value={formData.type}
-                          onChange={(e) => setFormData({...formData, type: e.target.value as any})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                        >
-                          <option value="Major">Major</option>
-                          <option value="Minor">Minor</option>
-                          <option value="OFI">OFI</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm text-[#4B5563] font-bold">Due Date</label>
-                          <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
-                             <Clock size={10} className="text-blue-500" />
-                             <span className="text-[9px] font-black text-[#172554] uppercase tracking-tighter">
-                                {getDaysRemaining(formData.dueDate)} Days Left
-                             </span>
-                          </div>
-                        </div>
-                        <input 
-                          readOnly={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                          type="date" 
-                          value={formData.dueDate}
-                          onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-[#4B5563] font-bold">Requirement Clause</label>
-                      <select 
-                        disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                        value={formData.clause}
-                        onChange={(e) => setFormData({...formData, clause: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                      >
-                        {REQUIREMENTS.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm text-[#4B5563] font-bold">Responsible Area</label>
-                      <select 
-                        disabled={isAuditee || (isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL)}
-                        value={formData.area}
-                        onChange={(e) => setFormData({...formData, area: e.target.value})}
-                        className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal"
-                      >
-                        {FINDING_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    </div>
-                  </div>
+                  </section>
+                  {isAuditee && viewingNCAR && canEditCAP && <section className="flex flex-col gap-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 sm:flex-row sm:items-center sm:justify-between lg:col-span-2">
+                    <div><h5 className="text-sm font-bold text-indigo-950">Part 2: Investigation and Action Plan</h5><p className="mt-1 text-xs text-indigo-800">Continue to the corrective action plan when you are ready to provide your response.</p></div>
+                    <button type="button" onClick={() => setIsCreatingActionPlan(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E3268]"><Plus size={17} />Corrective Action Plan</button>
+                  </section>}
                 </div>
-
-                <div className="p-6 border-t border-gray-100 bg-gray-50/30 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                        {viewingNCAR && viewingNCAR.status === NCARStatus.FOR_APPROVAL && isLead && (
-                      <div className="bg-blue-100 text-blue-700 p-2 px-4 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-tighter">
-                        <ShieldCheck size={14} /> Review Required
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-4">
-                    <button type="button" onClick={closeForm} className="px-8 py-3 bg-white border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-all text-sm tracking-widest uppercase">Close</button>
-                    {isLead && viewingNCAR?.status === NCARStatus.FOR_APPROVAL ? (
-                      <>
-                        <button 
-                          type="button"
-                          onClick={handleInitiateReject}
-                          className="px-8 py-3 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-black hover:bg-red-50 transition-all text-sm flex items-center gap-2 uppercase tracking-widest"
-                        >
-                          <XCircle size={18} /> Reject
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={handleApprove}
-                          className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-2 text-sm uppercase tracking-widest"
-                        >
-                          <CheckCircle2 size={18} /> Approve
-                        </button>
-                      </>
-                    ) : !isAuditee ? (
-                      <button type="submit" className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-2 text-sm uppercase tracking-widest">
-                        <Save size={18} /> {viewingNCAR ? 'Update NCAR' : 'Save NCAR'}
-                      </button>
-                    ) : (
-                      viewingNCAR && (viewingNCAR.status === NCARStatus.PENDING || viewingNCAR.status === NCARStatus.REJECTED || viewingNCAR.status === NCARStatus.REOPENED) && (
-                        <div className="flex gap-3">
-                          {(viewingNCAR.status === NCARStatus.REJECTED || viewingNCAR.status === NCARStatus.REOPENED) && (
-                            <button 
-                              type="button"
-                              onClick={initiateFreshPlan}
-                              className="px-8 py-3 bg-white border-2 border-blue-100 text-[#172554] rounded-2xl font-black hover:bg-blue-50 transition-all flex items-center gap-3 text-sm uppercase tracking-widest"
-                            >
-                              <PlusCircle size={18} /> Create New Plan
-                            </button>
-                          )}
-                          <button 
-                            type="button"
-                            onClick={() => setIsCreatingActionPlan(true)}
-                            className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-3 text-sm uppercase tracking-widest"
-                          >
-                            {viewingNCAR.status === NCARStatus.PENDING ? 'Create Action Plan' : 'Edit Previous Plan'} <ArrowRight size={18} />
-                          </button>
-                        </div>
-                      )
-                    )}
-                  </div>
+                <div className="flex flex-wrap justify-end gap-3 border-t border-gray-100 bg-white p-5 sm:px-6">
+                  {canApproveNCAR ? (
+                    <>
+                      {canEditNCAR && <button type="button" onClick={() => saveNCAR(viewingNCAR?.status === NCARStatus.DRAFT ? NCARStatus.DRAFT : NCARStatus.FOR_APPROVAL)} className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Save changes</button>}
+                      <button type="button" onClick={handleInitiateReject} className="rounded-lg border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50">Reject</button>
+                      <button type="button" onClick={handleApprove} className="rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">{isLeadReview ? 'Approve' : 'Final Approve'}</button>
+                    </>
+                  ) : viewingNCAR && canEditNCAR && viewingNCAR.status !== NCARStatus.DRAFT ? (
+                    <button type="button" onClick={() => saveNCAR(NCARStatus.FOR_APPROVAL)} className="rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">Save changes</button>
+                  ) : canCreate && (!viewingNCAR || viewingNCAR.status === NCARStatus.DRAFT) ? (
+                    <>
+                      <button type="button" onClick={handleSaveDraft} className="rounded-lg border border-[#172554] bg-white px-5 py-2.5 text-sm font-semibold text-[#172554] hover:bg-blue-50">Save as Draft</button>
+                      <button type="submit" className="flex items-center gap-2 rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Send size={16} /> Submit</button>
+                    </>
+                  ) : null}
                 </div>
               </form>
             ) : (
               <form onSubmit={handleApSubmit} className="text-sm text-[#4B5563] font-medium">
-                <div className="p-6 flex justify-between items-center border-b border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
-                      <Edit3 size={24} />
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-black text-gray-800 tracking-tight">
-                        {viewingNCAR?.rejectionRemarks ? 'Action Plan Revision' : 'Create Action Plan'}
-                      </h4>
-                      <p className="text-sm text-gray-500 font-medium">Ref: {viewingNCAR?.id}</p>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => setIsCreatingActionPlan(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
-                    <X size={24} />
-                  </button>
-                </div>
-                
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                  {viewingNCAR?.rejectionRemarks && (
-                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 mb-4 shadow-sm">
-                      <MessageSquare className="text-red-600 mt-1 flex-shrink-0" size={20} />
-                      <div>
-                        <span className="text-[10px] font-black text-red-600 uppercase tracking-widest block mb-1">Lead Auditor Rejection Feedback</span>
-                        <p className="text-sm font-bold text-red-800 italic leading-relaxed">"{viewingNCAR.rejectionRemarks}"</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100">
-                    <div className="flex items-center gap-2 text-[#172554] mb-2 font-black text-xs uppercase tracking-widest">
-                      <AlertCircle size={16} /> Non-Conformance Statement
-                    </div>
-                    <p className="text-sm text-[#4B5563] font-bold leading-relaxed italic">"{viewingNCAR?.statement}"</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Immediate Correction</label>
-                        <textarea 
-                          required
-                          value={apFormData.correction}
-                          onChange={(e) => setApFormData({...apFormData, correction: e.target.value})}
-                          placeholder="What steps were taken immediately to contain this?" 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                        ></textarea>
-                      </div>
-                      <div>
-                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Root Cause Analysis (RCA)</label>
-                        <textarea 
-                          required
-                          value={apFormData.rootCause}
-                          onChange={(e) => setApFormData({...apFormData, rootCause: e.target.value})}
-                          placeholder="Why did this happen? Identify systemic failures..." 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[120px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                        ></textarea>
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Long-term Corrective Action</label>
-                        <textarea 
-                          required
-                          value={apFormData.actionPlan}
-                          onChange={(e) => setApFormData({...apFormData, actionPlan: e.target.value})}
-                          placeholder="How will we prevent recurrence? Detail the strategy..." 
-                          className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                        ></textarea>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block">Assignee</label>
-                          <input 
-                            required
-                            type="text" 
-                            value={apFormData.responsible}
-                            onChange={(e) => setApFormData({...apFormData, responsible: e.target.value})}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal" 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest">Target Date</label>
-                            <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 animate-in fade-in zoom-in duration-300">
-                               <Clock size={10} className="text-blue-500" />
-                               <span className="text-[9px] font-black text-[#172554] uppercase tracking-tighter">
-                                  {getDaysRemaining(apFormData.dueDate)} Days
-                               </span>
-                            </div>
-                          </div>
-                          <input 
-                            required
-                            type="date" 
-                            value={apFormData.dueDate}
-                            onChange={(e) => setApFormData({...apFormData, dueDate: e.target.value})}
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal" 
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="pt-2">
-                        <label className="text-sm text-[#4B5563] font-bold text-[10px] uppercase tracking-widest block mb-2">Implementation Evidence Artifacts</label>
-                        <input 
-                          type="file" 
-                          onChange={handleApFileChange}
-                          className="hidden font-normal" 
-                          id="ncar-ap-file-upload"
-                        />
-                        <label 
-                          htmlFor="ncar-ap-file-upload"
-                          className="text-sm text-[#4B5563] font-bold flex items-center gap-3 bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-xl p-3.5 px-5 cursor-pointer hover:bg-blue-100/50 hover:border-blue-400 transition-all shadow-sm"
-                        >
-                          <FileUp size={20} className="text-blue-500" />
-                          <div className="text-left overflow-hidden">
-                            <p className="text-[11px] font-black text-blue-900 uppercase tracking-widest leading-none truncate">
-                              {apFormData.attachmentName || 'Select evidence files'}
-                            </p>
-                            <p className="text-[9px] text-blue-400 font-bold uppercase tracking-[0.1em] mt-1.5">
-                              Upload Proof of Implementation
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 border-t border-gray-100 bg-gray-50/30 flex justify-between items-center">
-                  <button 
-                    type="button"
-                    onClick={() => setApFormData(initialApFormData)}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all"
-                  >
-                    <Eraser size={18} /> Reset Form
-                  </button>
-                  <div className="flex gap-4">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsCreatingActionPlan(false)} 
-                      className="px-8 py-3 bg-white border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-all text-sm tracking-widest uppercase"
-                    >
-                      Back
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="px-10 py-3 bg-[#172554] text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-[#172554] flex items-center gap-3 text-sm tracking-widest uppercase"
-                    >
-                      <Send size={18} /> Submit for Review
-                    </button>
-                  </div>
-                </div>
-              </form>
+  <div className="p-6 flex justify-between items-center border-b border-gray-100">
+    <div className="flex items-center gap-4"><div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg"><Edit3 size={24} /></div><div><h4 id="cap-modal-title" className="text-2xl font-bold text-gray-800 tracking-tight">Corrective Action Plan</h4><p className="text-sm text-gray-500">Part 2 Â· NCAR Ref: {viewingNCAR?.id}</p></div></div>
+    <button type="button" onClick={() => setIsCreatingActionPlan(false)} aria-label="Close CAP form" className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full"><X size={24} /></button>
+  </div>
+  <div className="p-6 space-y-5 max-h-[78vh] overflow-y-auto custom-scrollbar bg-[#F8FAFC]">
+    {viewingNCAR?.rejectionRemarks && <div className="rounded-xl border border-red-100 bg-red-50 p-4"><p className="text-xs font-semibold uppercase text-red-600">Review feedback</p><p className="mt-1 text-sm text-red-800">{viewingNCAR.rejectionRemarks}</p></div>}
+    <fieldset disabled={!canEditCAP} className="contents">
+    <datalist id="cap-responsible-people"><option value="Bob Johnson" /><option value="Charlie Davis" /><option value="Sarah Wilson" /><option value="Michael Brown" /><option value="Alex Johnson" /><option value="Alice Smith" /></datalist>
+    <datalist id="cap-auditee-people">{users.filter(user => user.role === 'AUDITEE').map(user => <option key={user.id} value={user.name} />)}</datalist>
+    <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4"><h5 className="text-sm font-bold uppercase tracking-wide text-indigo-900">Part 2: Investigation and Action Plan</h5><p className="mt-1 text-xs text-indigo-800">Complete the impact assessment, investigation, immediate correction, and corrective action plan below.</p></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Impact Assessment</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Response Date</span><input required type="date" value={apFormData.responseDate} onChange={e => setApFormData({...apFormData, responseDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Consequence/Impact to Process or Business Unit</span><textarea required rows={3} value={apFormData.consequenceImpact} onChange={e => setApFormData({...apFormData, consequenceImpact: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the effect on the process or business unit." /></label></div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Immediate Correction</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Immediate Correction</span><textarea required rows={3} value={apFormData.correction} onChange={e => setApFormData({...apFormData, correction: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the immediate steps taken to address the NC." /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Person Responsible <span className="font-normal text-gray-400">(Manager default)</span></span><input required list="cap-responsible-people" value={apFormData.correctionResponsible} onChange={e => setApFormData({...apFormData, correctionResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search or enter a name" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Correction Target Date</span><input required type="date" value={apFormData.correctionTargetDate} onChange={e => setApFormData({...apFormData, correctionTargetDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Additional Person Responsible (Auditee) <span className="font-normal text-gray-400">(Optional)</span></span><input list="cap-auditee-people" value={apFormData.correctionAdditionalAuditeeResponsible} onChange={e => setApFormData({...apFormData, correctionAdditionalAuditeeResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search auditees by name" /></label></div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Root Cause Analysis</h5><div className="space-y-4"><label className="block space-y-1.5 text-xs font-medium text-gray-600"><span>Root Cause Analysis</span><textarea required rows={4} value={apFormData.rootCause} onChange={e => setApFormData({...apFormData, rootCause: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Identify the underlying cause." /></label><fieldset><legend className="mb-2 text-xs font-medium text-gray-600">Can the NC occur elsewhere?</legend><div className="flex gap-5">{(['Yes', 'No'] as const).map(answer => <label key={answer} className="flex items-center gap-2 text-sm text-gray-700"><input type="radio" name="cap-occurs-elsewhere" required checked={apFormData.canOccurElsewhere === answer} onChange={() => setApFormData({...apFormData, canOccurElsewhere: answer})} />{answer}</label>)}</div></fieldset>{apFormData.canOccurElsewhere === 'Yes' && <label className="block space-y-1.5 text-xs font-medium text-gray-600"><span>Details</span><textarea required rows={3} value={apFormData.elsewhereDetails} onChange={e => setApFormData({...apFormData, elsewhereDetails: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Identify other processes or business units that may be affected." /></label>}</div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Corrective Action Plan</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Corrective Action Plan</span><textarea required rows={4} value={apFormData.actionPlan} onChange={e => setApFormData({...apFormData, actionPlan: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the actions that will prevent recurrence." /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Person Responsible <span className="font-normal text-gray-400">(Manager default)</span></span><input required list="cap-responsible-people" value={apFormData.responsible} onChange={e => setApFormData({...apFormData, responsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search or enter a name" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>CAP Target Date</span><input required type="date" value={apFormData.capTargetDate} onChange={e => setApFormData({...apFormData, capTargetDate: e.target.value, dueDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Additional Person Responsible (Auditee) <span className="font-normal text-gray-400">(Optional)</span></span><input list="cap-auditee-people" value={apFormData.additionalAuditeeResponsible} onChange={e => setApFormData({...apFormData, additionalAuditeeResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search auditees by name" /></label></div></section>
+    </fieldset>
+  </div>
+  <div className="flex flex-wrap justify-end gap-3 border-t border-gray-100 bg-white p-5 sm:px-6">
+    {canEditCAP && <><button type="button" onClick={() => saveActionPlan(true)} className="rounded-lg border border-[#172554] bg-white px-5 py-2.5 text-sm font-semibold text-[#172554] hover:bg-blue-50">Save as Draft</button><button type="submit" className="flex items-center gap-2 rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Send size={16} /> Submit</button></>}
+    {canApproveCAP && <><button type="button" onClick={handleInitiateReject} className="rounded-lg border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"><XCircle size={16} /> Reject</button><button type="button" onClick={handleApproveCAP} className="flex items-center gap-2 rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Check size={16} /> {isLeadCAPReview ? 'Approve & Forward' : 'Final Approve'}</button></>}
+    {!canEditCAP && !canApproveCAP && <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Close</button>}
+  </div>
+</form>
             )}
           </div>
         </div>
@@ -954,6 +891,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
           </div>
         </div>
       )}
+
     </div>
   );
 };

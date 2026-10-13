@@ -1,10 +1,9 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   ClipboardList, 
   AlertCircle, 
-  CheckSquare, 
   ShieldCheck, 
   Bell, 
   ChevronDown,
@@ -21,7 +20,8 @@ import {
   UserPlus,
   LogOut,
   Check,
-  Trash2
+  Trash2,
+  Settings2
 } from 'lucide-react';
 import { 
   Role, 
@@ -31,17 +31,21 @@ import {
   AuditStatus, 
   NCARStatus,
   Notification,
-  User
+  User,
+  AuditReport
 } from './types';
-import { INITIAL_AUDIT_PLANS, INITIAL_NCARS, INITIAL_ACTION_PLANS, INITIAL_USERS } from './mockData';
+import { INITIAL_AUDIT_PLANS, INITIAL_AUDIT_REPORTS, INITIAL_NCARS, INITIAL_ACTION_PLANS, INITIAL_USERS } from './mockData';
 import AuditPlanning from './views/AuditPlanning';
 import NCARModule from './views/NCARModule';
-import ActionPlanModule from './views/ActionPlanModule';
 import ValidationModule from './views/ValidationModule';
 import UserManualModule from './views/UserManualModule';
 import UserManagement from './views/UserManagement';
+import MaintenanceTableModule from './views/MaintenanceTableModule';
 import AnalyticsModule from './views/AnalyticsModule';
 import Login from './views/Login';
+import AuditReportModule from './views/AuditReportModule';
+import OFIModule from './views/OFIModule';
+import { getConfiguredPhilippineHolidays, getPhilippineDateKey, getResponseSlaStatus, hasSubmittedNCARResponse, makeResponseSla } from './utils/ncarSla';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -49,8 +53,30 @@ const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string>('dashboard');
   const [currentRole, setCurrentRole] = useState<Role>('LEAD_AUDITOR');
   const [auditPlans, setAuditPlans] = useState<AuditPlan[]>(INITIAL_AUDIT_PLANS);
-  const [ncars, setNcars] = useState<NCAR[]>(INITIAL_NCARS);
+  const [ncars, setNcars] = useState<NCAR[]>(() => {
+    try {
+      const storedNCARs = localStorage.getItem('ncartool-ncars');
+      const savedNCARs = storedNCARs ? JSON.parse(storedNCARs) as NCAR[] : [];
+      const savedOFIs = localStorage.getItem('ncartool-ofi-records');
+      const savedOFIRecords = savedOFIs ? JSON.parse(savedOFIs) as NCAR[] : [];
+      const overdueDemoNCAR = INITIAL_NCARS.find(ncar => ncar.id === 'NCAR2026-SLA-001');
+      const recordsById = new Map<string, NCAR>([...(storedNCARs ? [...(overdueDemoNCAR ? [overdueDemoNCAR] : []), ...savedNCARs] : INITIAL_NCARS), ...savedOFIRecords].map(ncar => [ncar.id, ncar] as const));
+      return [...recordsById.values()];
+    } catch {
+      return INITIAL_NCARS;
+    }
+  });
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>(INITIAL_ACTION_PLANS);
+  const [auditReports, setAuditReports] = useState<AuditReport[]>(() => {
+    try {
+      const storedReports = localStorage.getItem('ncartool-audit-reports');
+      const savedReports = storedReports ? JSON.parse(storedReports) as AuditReport[] : [];
+      const reportsById = new Map<string, AuditReport>([...INITIAL_AUDIT_REPORTS, ...savedReports].map(report => [report.id, report] as const));
+      return [...reportsById.values()];
+    } catch {
+      return INITIAL_AUDIT_REPORTS;
+    }
+  });
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     try {
       const savedNotifications = localStorage.getItem('ncar-notifications');
@@ -68,10 +94,118 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userManualFile, setUserManualFile] = useState<{ name: string, url: string, uploadedAt: string } | null>(null);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [departments, setDepartments] = useState<string[]>(() => {
+    const initialDepartments = INITIAL_USERS.map(user => user.dept).filter(Boolean);
+    try {
+      const saved = localStorage.getItem('ncartool-departments');
+      const parsed = saved ? JSON.parse(saved) as unknown : [];
+      return [...new Set([...initialDepartments, ...(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [])])].sort();
+    } catch {
+      return [...new Set(initialDepartments)].sort();
+    }
+  });
+  const handledSlaNotifications = useRef(new Set<string>());
 
   useEffect(() => {
     localStorage.setItem('ncar-notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('ncartool-audit-reports', JSON.stringify(auditReports));
+  }, [auditReports]);
+
+  useEffect(() => {
+    localStorage.setItem('ncartool-ncars', JSON.stringify(ncars));
+    localStorage.setItem('ncartool-ofi-records', JSON.stringify(ncars.filter(ncar => ncar.findingType === 'OFI')));
+  }, [ncars]);
+
+  useEffect(() => {
+    const readyReports = auditReports.filter(report => report.status === 'Awaiting Auditee Responses' && [...report.ncarIds, ...report.ofiIds].every(id => {
+      const finding = ncars.find(ncar => ncar.id === id);
+      return Boolean(finding && hasSubmittedNCARResponse(finding));
+    }));
+    if (readyReports.length) {
+      const readyIds = new Set(readyReports.map(report => report.id));
+      setAuditReports(current => current.map(report => readyIds.has(report.id) ? { ...report, status: 'Pending Lead Review', updatedAt: new Date().toISOString() } : report));
+    }
+    const leadAuditor = users.find(user => user.role === 'LEAD_AUDITOR')?.name;
+    const headManager = users.find(user => user.role === 'HEAD_MANAGER')?.name;
+    const reviewNotifications = [
+      ...readyReports.map(report => ({
+        id: `report-cap-review-${report.id}`,
+        message: `All NCAR and OFI responses for ${report.reportTitle || report.referenceNumber || report.id} are submitted. The report is ready for Lead Auditor review.`,
+        type: 'info' as const,
+        timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+        ...(leadAuditor ? { recipientName: leadAuditor } : {}),
+        relatedRecordId: report.id
+      })),
+      ...auditReports.filter(report => report.status === 'Pending Final Approval').map(report => ({
+        id: `report-head-review-${report.id}`,
+        message: `${report.reportTitle || report.referenceNumber || report.id} was approved by the Lead Auditor and is awaiting your final approval.`,
+        type: 'info' as const,
+        timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+        ...(headManager ? { recipientName: headManager } : {}),
+        relatedRecordId: report.id
+      }))
+    ];
+    if (reviewNotifications.length) setNotifications(current => [
+      ...reviewNotifications.filter(notification => !current.some(item => item.id === notification.id)),
+      ...current
+    ]);
+  }, [auditReports, ncars, users]);
+
+  useEffect(() => {
+    const checkResponseSLAs = () => {
+      const now = new Date();
+      const today = getPhilippineDateKey(now);
+      const holidays = getConfiguredPhilippineHolidays();
+      const notificationsToAdd: Notification[] = [];
+      const updatedNCARs = ncars.map(ncar => {
+        if (!ncar.assignedAt) return ncar;
+        let responseSla = ncar.responseSla || makeResponseSla(ncar.assignedAt, holidays);
+        const dueDate = responseSla.dueDate || ncar.deadline;
+        if (!dueDate) return ncar;
+        const submitted = hasSubmittedNCARResponse(ncar);
+        const slaStatus = submitted ? 'Submitted' : getResponseSlaStatus({ ...ncar, responseSla }, now, holidays) || 'On Track';
+        let notificationHistory = responseSla.notificationHistory || [];
+        let didNotify = false;
+        const auditee = ncar.managerResponsible || ncar.auditee;
+        const createNotification = (type: 'due-soon' | 'overdue') => {
+          const key = `${ncar.id}:${type}`;
+          if (handledSlaNotifications.current.has(key) || notificationHistory.some(entry => entry.type === type)) return;
+          handledSlaNotifications.current.add(key);
+          const findingLabel = ncar.findingType === 'OFI' ? 'OFI' : 'NCAR';
+          const message = type === 'due-soon'
+            ? `${findingLabel} ${ncar.id} Part 2 response is ${today === dueDate ? 'due today' : 'due in one working day'} (${dueDate}).`
+            : `${findingLabel} ${ncar.id} Part 2 response is overdue. The due date was ${dueDate}.`;
+          const timestamp = now.toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+          notificationsToAdd.push({ id: `ncar-sla-${ncar.id}-${type}`, message, type: 'warning', timestamp, recipientName: auditee, relatedRecordId: ncar.id });
+          notificationHistory = [...notificationHistory, { type, notifiedAt: now.toISOString() }];
+          didNotify = true;
+        };
+
+        if (!submitted && slaStatus === 'Due Soon') createNotification('due-soon');
+        if (!submitted && slaStatus === 'Overdue') createNotification('overdue');
+        responseSla = { ...responseSla, dueDate, status: slaStatus, notificationHistory };
+        if (!ncar.responseSla || ncar.deadline !== dueDate || ncar.responseSla.status !== slaStatus || didNotify) {
+          return { ...ncar, deadline: dueDate, responseSla };
+        }
+        return ncar;
+      });
+
+      if (updatedNCARs.some((ncar, index) => ncar !== ncars[index])) setNcars(updatedNCARs);
+      if (notificationsToAdd.length) {
+        setNotifications(current => {
+          const existingIds = new Set(current.map(notification => notification.id));
+          return [...notificationsToAdd.filter(notification => !existingIds.has(notification.id)), ...current];
+        });
+      }
+    };
+
+    checkResponseSLAs();
+    const interval = window.setInterval(checkResponseSLAs, 60_000);
+    return () => window.clearInterval(interval);
+  }, [ncars, setNcars]);
 
   // Helper to add toast notifications
   const notify = (message: string, type: 'info' | 'success' | 'warning' = 'info') => {
@@ -86,7 +220,7 @@ const App: React.FC = () => {
 
   const handleLogin = (role: Role) => {
     // Find a user from mock data that matches the role, or default to a generic one
-    const user = INITIAL_USERS.find(u => u.role === role) || {
+    const user = users.find(u => u.role === role) || {
       id: '999',
       name: 'Alex Johnson',
       role: role,
@@ -108,14 +242,16 @@ const App: React.FC = () => {
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
+    { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE'] },
     // AUDITEE removed from roles for planning module
-    { id: 'planning', label: 'Audit Plan ', icon: ClipboardList, roles: ['LEAD_AUDITOR', 'AUDITOR'] },
-    { id: 'ncar', label: 'NCAR ', icon: AlertCircle, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
-    { id: 'actions', label: 'Action Plans', icon: CheckSquare, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
-    { id: 'validation', label: 'AP Validation', icon: ShieldCheck, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE'] },
+    { id: 'planning', label: 'Audit Plan ', icon: ClipboardList, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR'] },
+    { id: 'audit-reports', label: 'Audit Report', icon: FileText, roles: ['LEAD_AUDITOR', 'AUDITOR', 'HEAD_MANAGER'] },
+    { id: 'ncar', label: 'NCAR', icon: AlertCircle, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE'] },
+    { id: 'ofi', label: 'OFI', icon: TrendingUp, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE'] },
+    { id: 'validation', label: 'CAP Validation', icon: ShieldCheck, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE'] },
     { id: 'users', label: 'User Management', icon: UserPlus, roles: ['DEV_ADMIN'] },
-    { id: 'manual', label: 'User Manual', icon: FileText, roles: ['LEAD_AUDITOR', 'AUDITOR', 'AUDITEE', 'DEV_ADMIN'] },
+    { id: 'maintenance-tables', label: 'Maintenance Table', icon: Settings2, roles: ['DEV_ADMIN'] },
+    { id: 'manual', label: 'User Manual', icon: FileText, roles: ['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE', 'DEV_ADMIN'] },
   ];
 
   // Access Guard: If user switches role to one that doesn't have access to current module, redirect to dashboard
@@ -127,8 +263,9 @@ const App: React.FC = () => {
   }, [currentRole, activeModule]);
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(currentRole));
-  const unreadCount = notifications.filter(notification => !notification.read).length;
-  const visibleNotifications = notifications.filter(notification => notificationFilter === 'all' || !notification.read);
+  const userNotifications = notifications.filter(notification => !notification.recipientName || notification.recipientName.toLowerCase() === (currentUser?.name || '').toLowerCase());
+  const unreadCount = userNotifications.filter(notification => !notification.read).length;
+  const visibleNotifications = userNotifications.filter(notification => notificationFilter === 'all' || !notification.read);
 
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, read: true } : notification));
@@ -154,17 +291,33 @@ const App: React.FC = () => {
           actionPlans={actionPlans}
           setActionPlans={setActionPlans}
           role={currentRole} 
+          users={users}
+          issuingAuditor={currentUser?.name || ''}
           onNotify={notify} 
           setActiveModule={setActiveModule}
         />
       );
-      case 'actions': return (
-        <ActionPlanModule 
-          ncars={ncars} 
-          actionPlans={actionPlans} 
-          setActionPlans={setActionPlans} 
+      case 'audit-reports': return (
+        <AuditReportModule
+          reports={auditReports}
+          setReports={setAuditReports}
           setNcars={setNcars}
-          role={currentRole} 
+          auditPlans={auditPlans}
+          ncars={ncars}
+          users={users}
+          actionPlans={actionPlans}
+          role={currentRole}
+          currentUserName={currentUser?.name || ''}
+          onNotify={notify}
+        />
+      );
+      case 'ofi': return (
+        <OFIModule
+          ncars={ncars}
+          setNcars={setNcars}
+          reports={auditReports}
+          role={currentRole}
+          currentUserName={currentUser?.name || ''}
           onNotify={notify}
         />
       );
@@ -189,6 +342,15 @@ const App: React.FC = () => {
         <UserManagement 
           users={users}
           setUsers={setUsers}
+          departments={departments}
+          onNotify={notify}
+        />
+      );
+      case 'maintenance-tables': return (
+        <MaintenanceTableModule
+          departments={departments}
+          setDepartments={setDepartments}
+          setNcars={setNcars}
           onNotify={notify}
         />
       );
@@ -299,8 +461,8 @@ const App: React.FC = () => {
                   {(['all', 'unread'] as const).map(filter => <button key={filter} onClick={() => setNotificationFilter(filter)} className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${notificationFilter === filter ? 'bg-white text-[#172554] shadow-sm' : 'text-gray-600 hover:bg-white/70'}`}>{filter === 'all' ? 'All' : `Unread${unreadCount ? ` (${unreadCount})` : ''}`}</button>)}
                 </div>
                 <div className="px-4 py-2.5 flex items-center justify-between border-b border-[#EAE7DF]">
-                  <button onClick={() => setNotifications(prev => prev.map(notification => ({ ...notification, read: true })))} disabled={!unreadCount} className="text-xs font-medium text-gray-600 hover:text-[#172554] disabled:opacity-40 disabled:cursor-default">Mark all as read</button>
-                  <button onClick={() => setNotifications(prev => prev.filter(notification => !notification.read))} disabled={!notifications.some(notification => notification.read)} aria-label="Delete read notifications" title="Delete read notifications" className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md disabled:opacity-40 disabled:cursor-default"><Trash2 size={15} /></button>
+                  <button onClick={() => setNotifications(prev => prev.map(notification => !notification.recipientName || notification.recipientName.toLowerCase() === (currentUser?.name || '').toLowerCase() ? { ...notification, read: true } : notification))} disabled={!unreadCount} className="text-xs font-medium text-gray-600 hover:text-[#172554] disabled:opacity-40 disabled:cursor-default">Mark all as read</button>
+                  <button onClick={() => setNotifications(prev => prev.filter(notification => !((!notification.recipientName || notification.recipientName.toLowerCase() === (currentUser?.name || '').toLowerCase()) && notification.read)))} disabled={!userNotifications.some(notification => notification.read)} aria-label="Delete read notifications" title="Delete read notifications" className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md disabled:opacity-40 disabled:cursor-default"><Trash2 size={15} /></button>
                 </div>
                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                   {visibleNotifications.length ? visibleNotifications.map(n => (

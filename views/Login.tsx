@@ -96,6 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       className="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 rounded-2xl py-3.5 pl-12 pr-10 text-sm font-medium text-gray-800 outline-none transition-all appearance-none cursor-pointer shadow-sm"
                     >
                       <option value="LEAD_AUDITOR">Lead Auditor</option>
+                      <option value="HEAD_MANAGER">Head Manager</option>
                       <option value="AUDITOR">Auditor</option>
                       <option value="AUDITEE">Auditee</option>
                       <option value="DEV_ADMIN">Dev Admin</option>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { NCAR, ActionPlan, NCARStatus, Role } from '../types';
+import { NCAR, ActionPlan, NCARStatus, Role, User as UserRecord } from '../types';
+import { getResponseSlaStatus } from '../utils/ncarSla';
 import { 
   AlertCircle, 
   FileUp, 
@@ -32,10 +33,11 @@ interface ActionPlanModuleProps {
   setActionPlans: React.Dispatch<React.SetStateAction<ActionPlan[]>>;
   setNcars: React.Dispatch<React.SetStateAction<NCAR[]>>;
   role: Role;
+  users: UserRecord[];
   onNotify: (msg: string, type?: 'info' | 'success' | 'warning') => void;
 }
 
-const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans, setActionPlans, setNcars, role, onNotify }) => {
+const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans, setActionPlans, setNcars, role, users, onNotify }) => {
   const [selectedNCAR, setSelectedNCAR] = useState<NCAR | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -49,18 +51,33 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
+  const getToday = () => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
   const initialApFormData = {
     correction: '',
     rootCause: '',
     actionPlan: '',
-    responsible: 'Bob Johnson',
+    responsible: '',
+    correctionResponsible: '',
+    correctionAdditionalAuditeeResponsible: '',
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    correctionTargetDate: '',
+    responseDate: getToday(),
+    consequenceImpact: '',
+    canOccurElsewhere: 'No' as 'Yes' | 'No',
+    elsewhereDetails: '',
+    capTargetDate: '',
+    additionalAuditeeResponsible: '',
     attachmentName: ''
   };
 
   const [apFormData, setApFormData] = useState(initialApFormData);
   
-  const isLead = role === 'LEAD_AUDITOR';
+  const isLead = role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER';
+  const isHeadManager = role === 'HEAD_MANAGER';
   const isAuditor = role === 'AUDITOR';
   const isAuditee = role === 'AUDITEE';
   const isReadOnly = isLead || isAuditor;
@@ -83,12 +100,27 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
           correction: existingPlan.immediateCorrection,
           rootCause: existingPlan.rootCause,
           actionPlan: existingPlan.correctiveAction,
-          responsible: existingPlan.responsiblePerson,
-          dueDate: existingPlan.dueDate,
+          responsible: existingPlan.capResponsible || existingPlan.responsiblePerson,
+          correctionResponsible: existingPlan.correctionResponsible || '',
+          correctionAdditionalAuditeeResponsible: existingPlan.correctionAdditionalAuditeeResponsible || '',
+          dueDate: existingPlan.capTargetDate || existingPlan.dueDate,
+          correctionTargetDate: existingPlan.correctionTargetDate || '',
+          responseDate: existingPlan.responseDate || getToday(),
+          consequenceImpact: existingPlan.consequenceImpact || '',
+          canOccurElsewhere: existingPlan.canOccurElsewhere || 'No',
+          elsewhereDetails: existingPlan.elsewhereDetails || '',
+          capTargetDate: existingPlan.capTargetDate || '',
+          additionalAuditeeResponsible: existingPlan.additionalAuditeeResponsible || '',
           attachmentName: existingPlan.remarks || '' 
         });
       } else {
-        setApFormData(initialApFormData);
+        const defaultResponsible = selectedNCAR.managerResponsible || selectedNCAR.auditee || '';
+        setApFormData({
+          ...initialApFormData,
+          responsible: defaultResponsible,
+          correctionResponsible: defaultResponsible,
+          correctionAdditionalAuditeeResponsible: ''
+        });
       }
     }
   }, [selectedNCAR, actionPlans]);
@@ -109,8 +141,8 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
 
   const filteredNCARs = useMemo(() => {
     let base = (isLead || isAuditor)
-      ? ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED)
-      : ncars.filter(n => n.status === NCARStatus.PENDING || n.status === NCARStatus.REJECTED || n.status === NCARStatus.REOPENED);
+      ? ncars.filter(n => n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED)
+      : ncars.filter(n => n.status === NCARStatus.APPROVED || n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED || n.status === NCARStatus.CLOSED || n.status === NCARStatus.REJECTED || n.status === NCARStatus.REOPENED);
 
     return base.filter(ncar => {
       const matchesSearch = 
@@ -123,8 +155,8 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         statusFilter === 'All Status' || 
         (statusFilter === 'Approved' && ncar.status === NCARStatus.CLOSED) ||
         (statusFilter === 'Rejected' && (ncar.status === NCARStatus.REJECTED || ncar.status === NCARStatus.REOPENED)) ||
-        (statusFilter === 'For Approval' && ncar.status === NCARStatus.FOR_APPROVAL) ||
-        (statusFilter === 'Pending' && (ncar.status === NCARStatus.PENDING || (!isAuditee && ncar.status === NCARStatus.FOR_APPROVAL))) ||
+        (statusFilter === 'For Approval' && (ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED)) ||
+        (statusFilter === 'Pending' && (ncar.status === NCARStatus.PENDING || ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED)) ||
         ncar.status.toLowerCase() === statusFilter.toLowerCase();
 
       const matchesType = 
@@ -147,29 +179,56 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
     setApFormData(initialApFormData);
   };
 
-  const handleSubmitAction = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveActionPlan = (isDraft: boolean) => {
     if (!selectedNCAR || isReadOnly) return;
+    const additionalAuditee = apFormData.additionalAuditeeResponsible.trim();
+    const correctionAdditionalAuditee = apFormData.correctionAdditionalAuditeeResponsible.trim();
+    const isAuditeeUser = (name: string) => users.some(user => user.role === 'AUDITEE' && user.name.toLowerCase() === name.toLowerCase());
+    if ((additionalAuditee && !isAuditeeUser(additionalAuditee)) || (correctionAdditionalAuditee && !isAuditeeUser(correctionAdditionalAuditee))) {
+      onNotify('Choose an existing user with the Auditee role for each additional responsible person.', 'warning');
+      return;
+    }
 
     const now = new Date();
     const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const existingPlan = actionPlans.find(ap => ap.ncarId === selectedNCAR.id);
     const newAP: ActionPlan = {
-      id: `ACT_${String(actionPlans.length + 1).padStart(6, '0')}_${timestamp}`,
+      id: existingPlan?.id || `ACT_${String(actionPlans.length + 1).padStart(6, '0')}_${timestamp}`,
       ncarId: selectedNCAR.id,
       immediateCorrection: apFormData.correction,
       responsiblePerson: apFormData.responsible,
       rootCause: apFormData.rootCause,
       correctiveAction: apFormData.actionPlan,
-      dueDate: apFormData.dueDate,
-      submittedAt: now.toISOString(),
-      remarks: apFormData.attachmentName
+      dueDate: apFormData.capTargetDate,
+      submittedAt: isDraft ? (existingPlan?.submittedAt || now.toISOString()) : now.toISOString(),
+      remarks: apFormData.attachmentName,
+      responseDate: apFormData.responseDate,
+      consequenceImpact: apFormData.consequenceImpact,
+      correctionResponsible: apFormData.correctionResponsible,
+      correctionAdditionalAuditeeResponsible: correctionAdditionalAuditee,
+      correctionTargetDate: apFormData.correctionTargetDate,
+      canOccurElsewhere: apFormData.canOccurElsewhere,
+      elsewhereDetails: apFormData.elsewhereDetails,
+      capResponsible: apFormData.responsible,
+      additionalAuditeeResponsible: additionalAuditee,
+      capTargetDate: apFormData.capTargetDate,
+      isDraft
     };
 
     setActionPlans(prev => [...prev.filter(ap => ap.ncarId !== selectedNCAR.id), newAP]);
-    setNcars(prev => prev.map(n => n.id === selectedNCAR.id ? { ...n, status: NCARStatus.FOR_APPROVAL, rejectionRemarks: undefined } : n));
+    if (!isDraft) {
+      setNcars(prev => prev.map(n => n.id === selectedNCAR.id ? { ...n, status: NCARStatus.ACTION_PLAN_SUBMITTED, responseAt: n.responseAt || new Date().toISOString(), responseSla: n.responseSla ? { ...n.responseSla, status: 'Submitted' } : undefined, rejectionRemarks: undefined } : n));
+    } else if (selectedNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED || selectedNCAR.status === NCARStatus.CAP_LEAD_APPROVED) {
+      setNcars(prev => prev.map(n => n.id === selectedNCAR.id ? { ...n, status: NCARStatus.APPROVED } : n));
+    }
     
     handleCloseAction();
-    onNotify(`Action Plan for ${selectedNCAR.id} submitted for review.`, 'success');
+    onNotify(isDraft ? `CAP for ${selectedNCAR.id} saved as a draft.` : `CAP for ${selectedNCAR.id} submitted for review.`, 'success');
+  };
+
+  const handleSubmitAction = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveActionPlan(false);
   };
 
   const finalizeRejection = () => {
@@ -183,8 +242,12 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
 
   const handleApprove = () => {
     if (!selectedNCAR) return;
-    setNcars(prev => prev.map(n => n.id === selectedNCAR.id ? { ...n, status: NCARStatus.CLOSED, rejectionRemarks: undefined } : n));
-    onNotify(`Plan for ${selectedNCAR.id} Approved.`, 'success');
+    const isLeadApproval = role === 'LEAD_AUDITOR' && selectedNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED;
+    const isFinalApproval = role === 'HEAD_MANAGER' && selectedNCAR.status === NCARStatus.CAP_LEAD_APPROVED;
+    if (!isLeadApproval && !isFinalApproval) return;
+    const nextStatus = isLeadApproval ? NCARStatus.CAP_LEAD_APPROVED : NCARStatus.CLOSED;
+    setNcars(prev => prev.map(n => n.id === selectedNCAR.id ? { ...n, status: nextStatus, rejectionRemarks: undefined } : n));
+    onNotify(isLeadApproval ? `CAP for ${selectedNCAR.id} approved by Lead Auditor and sent to Head Manager.` : `CAP for ${selectedNCAR.id} approved by Head Manager.`, 'success');
     handleCloseAction();
   };
 
@@ -194,14 +257,14 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
     }
   };
 
-  const pendingCount = ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length;
+  const pendingCount = ncars.filter(n => isHeadManager ? n.status === NCARStatus.CAP_LEAD_APPROVED : n.status === NCARStatus.ACTION_PLAN_SUBMITTED).length;
   const statusOptions = [
     { label: 'All Status', count: ncars.length },
     { label: 'Approved', count: ncars.filter(n => n.status === NCARStatus.CLOSED).length },
     { label: 'Rejected', count: ncars.filter(n => n.status === NCARStatus.REJECTED || n.status === NCARStatus.REOPENED).length },
     ...(isAuditee
-      ? [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.PENDING).length }]
-      : [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.FOR_APPROVAL).length }])
+      ? [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.PENDING || n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED).length }]
+      : [{ label: 'Pending', count: ncars.filter(n => n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED).length }])
   ];
   const statusCards = statusOptions.map(({ label, count }) => {
     const selected = statusFilter === label;
@@ -221,7 +284,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         type="button"
         onClick={() => setStatusFilter(label)}
         aria-pressed={selected}
-        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? palette.selected : 'border-[#e7e5e4]'}`}
+        className={`group relative flex h-full min-h-[136px] w-full min-w-0 flex-col items-stretch justify-between overflow-hidden rounded-2xl border bg-[#fffef5] px-5 py-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected ? 'border-indigo-200 ring-2 ring-indigo-100' : 'border-[#efe5d3]'}`}
       >
         <span className={`absolute inset-x-0 top-0 h-1 ${palette.stripe}`} />
         <span className="flex min-w-0 items-center justify-between gap-2">
@@ -240,7 +303,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
     <div className="space-y-5 text-base relative">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Action Plans</h3>
+          <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Corrective Action Plan</h3>
         </div>
         {isLead && (
           <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 flex items-center gap-3">
@@ -250,7 +313,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
         )}
       </div>
 
-      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="rounded-2xl border border-[#f3e7d3] bg-[#fff8e9] p-2 shadow-sm">
         <div className={`grid w-full grid-cols-2 auto-rows-fr items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-4 ${statusOptions.length > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`} role="group" aria-label="Filter by action plan status">
           {statusCards}
         </div>
@@ -308,7 +371,9 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">ACP ID</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Finding Type</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Requirement</th>
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Corrective Action Plan</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900">Auditee</th>
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Response Date</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Deadline</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Status</th>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-blue-900 text-center">Action</th>
@@ -316,7 +381,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#4B5563]">
                 {filteredNCARs.length === 0 ? (
-                  <tr><td colSpan={8} className="px-8 py-12 text-center text-gray-400 font-medium text-sm">No matching items.</td></tr>
+                  <tr><td colSpan={10} className="px-8 py-12 text-center text-gray-400 font-medium text-sm">No matching items.</td></tr>
                 ) : (
                   filteredNCARs.map(n => (
                     <tr key={n.id} className="hover:bg-blue-50/20 transition-all group">
@@ -332,6 +397,13 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                       })()}
                     <td className="px-5 py-4"><span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.findingType === 'Major' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-[#172554] border-blue-100'}`}>{n.findingType}</span></td>
                     <td className="px-5 py-4"><p className="font-normal text-gray-700 text-sm line-clamp-1">{n.requirement}</p></td>
+                    <td className="px-5 py-4 max-w-[260px]">
+                      {(() => {
+                        const plan = actionPlans.find(item => item.ncarId === n.id);
+                        if (!plan || plan.isDraft) return <span className="text-xs text-gray-400">{plan ? 'Draft — not submitted' : 'Not submitted'}</span>;
+                        return <p className="line-clamp-2 text-sm text-gray-700" title={plan.correctiveAction}>{plan.correctiveAction || 'CAP submitted'}</p>;
+                      })()}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold shrink-0">
@@ -342,13 +414,14 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         </span>
                       </div>
                     </td>
+                    <td className="px-5 py-4 text-center text-sm text-gray-600 whitespace-nowrap">{(() => { const ap = actionPlans.find(plan => plan.ncarId === n.id); return ap && !ap.isDraft && ap.submittedAt ? new Date(ap.submittedAt).toLocaleDateString() : '—'; })()}</td>
                     <td className="px-5 py-4 text-center">
-                      <div className="text-sm font-normal text-gray-600">{new Date(n.deadline).toLocaleDateString()}</div>
-                      <div className="text-xs font-medium text-[#172554] uppercase mt-1">{getDaysRemaining(n.deadline)} days left</div>
+                      <div className="text-sm font-normal text-gray-600">{n.deadline ? new Date(`${(n.responseSla?.dueDate || n.deadline).slice(0, 10)}T00:00:00`).toLocaleDateString() : '—'}</div>
+                      {getResponseSlaStatus(n) ? <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getResponseSlaStatus(n) === 'Overdue' ? 'border-red-200 bg-red-50 text-red-700' : getResponseSlaStatus(n) === 'Due Soon' ? 'border-amber-200 bg-amber-50 text-amber-700' : getResponseSlaStatus(n) === 'Submitted' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-100 bg-blue-50 text-blue-700'}`}>{getResponseSlaStatus(n)}</span> : <div className="text-xs font-medium text-[#172554] uppercase mt-1">{n.deadline ? `${getDaysRemaining(n.deadline)} days left` : 'Not assigned'}</div>}
                     </td>
                     <td className="px-5 py-4 text-center">
                       <span className={`text-xs font-medium px-3 py-1 rounded-full uppercase border ${n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED ? 'bg-red-50 text-red-600 border-red-100' : n.status === NCARStatus.CLOSED ? 'bg-green-50 text-green-600 border-green-100' : n.status === NCARStatus.PENDING ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-[#172554] border-blue-100'}`}>
-                        {n.status === NCARStatus.CLOSED ? 'Approved' : (n.status === NCARStatus.REOPENED ? 'Rejected' : (n.status === NCARStatus.FOR_APPROVAL ? 'Review Req.' : n.status))}
+                        {n.status === NCARStatus.CLOSED ? 'Approved' : n.status === NCARStatus.REOPENED ? 'Rejected' : n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED ? 'Pending' : n.status}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center">
@@ -357,9 +430,11 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                           ? "View Action Plan" 
                           : isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED)
                             ? "Revise Action Plan" 
-                            : isAuditee && n.status === NCARStatus.PENDING
+                          : isAuditee && (n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED)
+                              ? "Edit Corrective Action Plan"
+                              : isAuditee && n.status === NCARStatus.PENDING
                               ? "Create Action Plan"
-                              : n.status === NCARStatus.FOR_APPROVAL
+                          : n.status === NCARStatus.ACTION_PLAN_SUBMITTED || n.status === NCARStatus.CAP_LEAD_APPROVED
                                 ? (isLead ? "Review & Approve Action Plan" : "View Action Plan")
                                 : n.status === NCARStatus.CLOSED
                                   ? "View Approved Plan"
@@ -399,7 +474,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
 
       {selectedNCAR && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[94vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {!isCreatingActionPlan ? (
               <>
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -408,7 +483,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                       <ClipboardList size={32} />
                     </div>
                     <div>
-                      <h4 className="text-3xl font-black text-gray-800 tracking-tight">Non-Conformance Detail</h4>
+                      <h4 className="text-3xl font-black text-gray-800 tracking-tight">NCAR and CAP Details</h4>
                       <p className="text-sm font-bold text-gray-400 uppercase mt-1">Ref ID: {selectedNCAR.id}</p>
                     </div>
                   </div>
@@ -436,14 +511,24 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-[#172554] font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> Audit Finding</div>
-                    <div className="space-y-6">
-                      <div><label className="text-m text-[#4B5563] font-bold block mb-2">Statement</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">"{selectedNCAR.statement}"</div></div>
-                      <div><label className="text-m text-[#4B5563] font-bold block mb-2">Evidence</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{selectedNCAR.evidence}</div></div>
+                    <div className="flex items-center gap-3 text-[#172554] font-black uppercase text-m border-b-2 border-blue-100 pb-3"><ClipboardList size={18} /> NCAR Details</div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">NCAR ID</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.id}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Status</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.status}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Audit Type</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.auditType}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Finding Type</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.findingType}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Process</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.processInvolved || selectedNCAR.processName || 'N/A'}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Department / Area</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.departmentResponsible || selectedNCAR.area || 'N/A'}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Requirement / Clause</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.requirement}{selectedNCAR.clauseNumber ? ` · ${selectedNCAR.clauseNumber}` : ''}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">NCAR Response Due Date</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{new Date(selectedNCAR.deadline).toLocaleDateString()}</div></div>
+                      <div className="sm:col-span-2"><label className="text-sm text-[#4B5563] font-bold block mb-1">Nonconformity Statement</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal whitespace-pre-wrap">{selectedNCAR.statement}</div></div>
+                      <div className="sm:col-span-2"><label className="text-sm text-[#4B5563] font-bold block mb-1">Objective Evidence</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal whitespace-pre-wrap">{selectedNCAR.evidence}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Issuing Auditor</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.issuingAuditor || selectedNCAR.auditor || 'N/A'}</div></div>
+                      <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Auditee / Manager</label><div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-3 text-sm font-normal">{selectedNCAR.managerResponsible || selectedNCAR.auditee || 'N/A'}</div></div>
                     </div>
                   </div>
                     <div className="space-y-5">
-                    <div className="flex items-center gap-3 text-green-600 font-black uppercase text-m border-b-2 border-green-100 pb-3"><CheckCircle2 size={18} /> Action Plan</div>
+                    <div className="flex items-center gap-3 text-green-600 font-black uppercase text-m border-b-2 border-green-100 pb-3"><CheckCircle2 size={18} /> Corrective Action Plan (CAP)</div>
                     <div className="space-y-6">
                       {isReadOnly || actionPlans.find(ap => ap.ncarId === selectedNCAR.id) ? (
                         (() => {
@@ -453,13 +538,24 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                               {ap && (
                                 <div>
                                   <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div><label className="text-sm text-[#4B5563] font-bold mb-1">ACP Number</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{ap.id.replace(/^ACT_/, 'ACP__')}</div></div>
-                                    <div><label className="text-sm text-[#4B5563] font-bold block mb-1">Auditee</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{ap.responsiblePerson}</div></div>
+                                    <div><label className="text-sm text-[#4B5563] font-bold mb-1">CAP Number</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{ap.id.replace(/^ACT_/, 'CAP_')}</div></div>
+                                    <div><label className="text-sm text-[#4B5563] font-bold block mb-1">CAP Person Responsible</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{ap.capResponsible || ap.responsiblePerson}</div></div>
                                   </div>
                                 </div>
                               )}
-                              <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Root Cause</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{apFormData.rootCause || 'N/A'}</div></div>
-                              <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Corrective Strategy</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 transition-all font-normal">{apFormData.actionPlan || 'N/A'}</div></div>
+                              {ap?.isDraft && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800">CAP saved as draft</div>}
+                              {ap && <>
+                                <div className="grid grid-cols-2 gap-3"><div><label className="text-sm text-[#4B5563] font-bold block mb-2">Response Date</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.responseDate || 'N/A'}</div></div><div><label className="text-sm text-[#4B5563] font-bold block mb-2">CAP Submitted On</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.isDraft ? 'Not submitted' : new Date(ap.submittedAt).toLocaleDateString()}</div></div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Consequence / Impact to Process or Business Unit</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal whitespace-pre-wrap">{ap.consequenceImpact || 'N/A'}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Immediate Correction</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal whitespace-pre-wrap">{ap.immediateCorrection || 'N/A'}</div></div>
+                                <div className="grid grid-cols-2 gap-3"><div><label className="text-sm text-[#4B5563] font-bold block mb-2">Correction Person Responsible</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.correctionResponsible || 'N/A'}</div></div><div><label className="text-sm text-[#4B5563] font-bold block mb-2">Correction Target Date</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.correctionTargetDate || 'N/A'}</div></div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Additional Auditee for Immediate Correction</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.correctionAdditionalAuditeeResponsible || 'Not assigned'}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Root Cause Analysis</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal whitespace-pre-wrap">{ap.rootCause || 'N/A'}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Can the NC occur elsewhere?</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.canOccurElsewhere || 'N/A'}{ap.elsewhereDetails ? ` · ${ap.elsewhereDetails}` : ''}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Corrective Action Plan</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal whitespace-pre-wrap">{ap.correctiveAction || 'N/A'}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">CAP Target Date</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.capTargetDate || ap.dueDate}</div></div>
+                                <div><label className="text-sm text-[#4B5563] font-bold block mb-2">Additional Auditee for CAP</label><div className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-3 text-sm font-normal">{ap.additionalAuditeeResponsible || 'Not assigned'}</div></div>
+                              </>}
                               {ap && ap.remarks && (
                                 <div className="mt-4"><label className="text-sm text-[#4B5563] font-bold block mb-2">Action Plan Attachment</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-normal text-gray-800"><FileUp className="inline-block mr-2" /> <a href={`/${ap.remarks}`} target="_blank" rel="noopener noreferrer" className="underline text-[#172554]">{ap.remarks}</a></div></div>
                               )}
@@ -476,7 +572,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                 <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
                   <div className="text-xs font-bold text-gray-400">Audit Ref: <span className="text-blue-500 font-black">{selectedNCAR.auditPlanId}</span></div>
                   <div className="flex gap-4">
-                    {isLead && selectedNCAR.status === NCARStatus.FOR_APPROVAL && (
+                    {((role === 'LEAD_AUDITOR' && selectedNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED) || (role === 'HEAD_MANAGER' && selectedNCAR.status === NCARStatus.CAP_LEAD_APPROVED)) && (
                       <>
                         <div className="relative group/tooltip inline-block">
                           <button onClick={() => setShowRejectModal(true)} title="Reject Action Plan and request revision" aria-label="Reject Action Plan" className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50">
@@ -490,12 +586,12 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                           </div>
                         </div>
                         <div className="relative group/tooltip inline-block">
-                          <button onClick={handleApprove} title="Approve Action Plan" aria-label="Approve Action Plan" className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
-                            <CheckCircle2 size={18} /> Approve
+                          <button onClick={handleApprove} title={isHeadManager ? "Final approval of CAP" : "Approve CAP and send to Head Manager"} aria-label={isHeadManager ? "Final approval of CAP" : "Approve CAP and send to Head Manager"} className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
+                            <CheckCircle2 size={18} /> {isHeadManager ? 'Final Approve' : 'Approve & Forward'}
                           </button>
                           <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
                             <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
-                              Approve Action Plan
+                              {isHeadManager ? 'Final approval by Head Manager' : 'Approve CAP and forward to Head Manager'}
                             </span>
                             <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
                           </div>
@@ -528,7 +624,7 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         </div>
                       </div>
                     )}
-                    {isAuditee && selectedNCAR.status === NCARStatus.PENDING && (
+                    {isAuditee && selectedNCAR.status === NCARStatus.APPROVED && (
                       <div className="relative group/tooltip inline-block">
                         <button onClick={() => setIsCreatingActionPlan(true)} title="Begin creating action plan" aria-label="Start Action Plan" className="flex items-center gap-3 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
                           Start Action Plan <ArrowRight size={20} />
@@ -541,131 +637,29 @@ const ActionPlanModule: React.FC<ActionPlanModuleProps> = ({ ncars, actionPlans,
                         </div>
                       </div>
                     )}
+                    {isAuditee && (selectedNCAR.status === NCARStatus.ACTION_PLAN_SUBMITTED || selectedNCAR.status === NCARStatus.CAP_LEAD_APPROVED) && (
+                      <button onClick={() => setIsCreatingActionPlan(true)} title="Edit submitted CAP" aria-label="Edit submitted CAP" className="flex items-center gap-2 rounded-2xl bg-[#172554] px-8 py-4 text-xs font-bold uppercase tracking-widest text-white shadow-lg hover:bg-[#1E3268]">
+                        <Edit3 size={18} /> Edit CAP
+                      </button>
+                    )}
                   </div>
                 </div>
               </>
             ) : (
               <form onSubmit={handleSubmitAction} className="text-sm text-[#4B5563] font-medium">
-                <div className="p-6 flex justify-between items-center border-b border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
-                      <Edit3 size={24} />
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-bold text-gray-800 tracking-tight">
-                        {selectedNCAR.rejectionRemarks ? 'Action Plan Revision' : 'Create Action Plan'}
-                      </h4>
-                      <p className="text-sm text-gray-500 font-medium">Ref: {selectedNCAR.id}</p>
-                    </div>
-                  </div>
-                  <div className="relative group/tooltip inline-block">
-                    <button type="button" onClick={() => setIsCreatingActionPlan(false)} title="Close editor" aria-label="Close" className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full transition-all">
-                      <X size={24} />
-                    </button>
-                    <div className="pointer-events-none absolute bottom-full mb-2 right-0 hidden group-hover/tooltip:flex flex-col items-end z-30 transition-all duration-150">
-                      <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
-                        Close
-                      </span>
-                      <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1 mr-3"></span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                   <div className="bg-blue-50/50 border border-blue-100 rounded-[2rem] p-6 flex items-start gap-4">
-                      <div className="p-2 bg-blue-100 text-[#172554] rounded-xl"><AlertCircle size={20} /></div>
-                      <div><span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">NCAR Finding Statement</span><p className="text-sm font-bold text-gray-800 italic leading-relaxed">"{selectedNCAR.statement}"</p></div>
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-sm text-[#4B5563] font-bold">Immediate Correction (Containment)</label>
-                          <textarea 
-                            required
-                            value={apFormData.correction}
-                            onChange={(e) => setApFormData({...apFormData, correction: e.target.value})}
-                            placeholder="What steps were taken immediately to address this?"
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-[#4B5563] font-bold">Root Cause Analysis (RCA)</label>
-                          <textarea 
-                            required
-                            value={apFormData.rootCause}
-                            onChange={(e) => setApFormData({...apFormData, rootCause: e.target.value})}
-                            placeholder="Identify systemic failures..."
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[140px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-sm text-[#4B5563] font-bold">Long-term Corrective Action</label>
-                          <textarea 
-                            required
-                            value={apFormData.actionPlan}
-                            onChange={(e) => setApFormData({...apFormData, actionPlan: e.target.value})}
-                            placeholder="How will we prevent recurrence?"
-                            className="w-full bg-gray-50 border-gray-200 border-2 rounded-xl p-4 text-sm min-h-[100px] outline-none transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-normal"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div><label className="text-sm text-[#4B5563] font-bold">Assignee</label><input required type="text" value={apFormData.responsible} onChange={(e) => setApFormData({...apFormData, responsible: e.target.value})} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 text-sm font-normal" /></div>
-                          <div><label className="text-sm text-[#4B5563] font-bold">Target Date</label><input required type="date" value={apFormData.dueDate} onChange={(e) => setApFormData({...apFormData, dueDate: e.target.value})} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 text-sm font-normal" /></div>
-                        </div>
-                        <div>
-                          <label className="text-sm text-[#4B5563] font-bold">Action Plan Attachment</label>
-                          <input type="file" id="ap-mod-file" className="hidden font-normal" onChange={handleFileChange} />
-                          <label htmlFor="ap-mod-file" className="text-sm text-[#4B5563] font-bold w-full border-2 border-dashed border-blue-200 rounded-2xl p-6 bg-blue-50/30 flex items-center justify-center gap-4 cursor-pointer hover:bg-blue-100/30 transition-all">
-                            <FileUp size={24} className="text-blue-500" />
-                            <div className="text-left"><p className="text-sm text-[#4B5563] font-bold">{apFormData.attachmentName || 'Choose File'}</p><p className="text-[8px] text-blue-400 font-bold uppercase tracking-widest mt-1">Proof of Implementation</p></div>
-                          </label>
-                        </div>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                  <div className="relative group/tooltip inline-block">
-                    <button type="button" onClick={() => setApFormData(initialApFormData)} title="Reset form to defaults" aria-label="Reset Form" className="flex items-center gap-2 px-6 py-4 bg-white border-2 border-gray-100 text-gray-500 hover:text-red-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all">
-                      <Eraser size={18} /> Reset Form
-                    </button>
-                    <div className="pointer-events-none absolute bottom-full mb-2 left-0 hidden group-hover/tooltip:flex flex-col items-start z-30 transition-all duration-150">
-                      <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
-                        Reset all form inputs
-                      </span>
-                      <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1 ml-4"></span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="relative group/tooltip inline-block">
-                      <button type="button" onClick={() => setIsCreatingActionPlan(false)} title="Back to finding details" aria-label="Back" className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-50 transition-all uppercase text-xs tracking-wider shadow-sm">
-                        <Undo2 size={18} /> Back
-                      </button>
-                      <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/tooltip:flex flex-col items-center z-30 transition-all duration-150">
-                        <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
-                          Return to details
-                        </span>
-                        <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1"></span>
-                      </div>
-                    </div>
-                    <div className="relative group/tooltip inline-block">
-                      <button type="submit" title="Submit action plan for auditor review" aria-label="Submit Action Plan" className="flex items-center gap-3 px-10 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl transition-all uppercase text-xs tracking-wider">
-                        <Send size={18} /> Submit Action Plan
-                      </button>
-                      <div className="pointer-events-none absolute bottom-full mb-2 right-0 hidden group-hover/tooltip:flex flex-col items-end z-30 transition-all duration-150">
-                        <span className="px-2.5 py-1 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-lg shadow-md whitespace-nowrap">
-                          Submit plan for review
-                        </span>
-                        <span className="w-1.5 h-1.5 bg-blue-50 border-r border-b border-blue-200 rotate-45 -mt-1 mr-4"></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </form>
+  <div className="p-6 flex justify-between items-center border-b border-gray-100"><div className="flex items-center gap-4"><div className="bg-[#172554] p-3 rounded-2xl text-white shadow-lg"><Edit3 size={24} /></div><div><h4 className="text-2xl font-bold text-gray-800 tracking-tight">{selectedNCAR.rejectionRemarks ? 'CAP Revision' : 'Corrective Action Plan (CAP)'}</h4><p className="text-sm text-gray-500">NCARTool · Ref: {selectedNCAR.id}</p></div></div><button type="button" onClick={() => setIsCreatingActionPlan(false)} aria-label="Close CAP form" className="text-gray-400 hover:text-gray-800 bg-gray-50 p-2 rounded-full"><X size={24} /></button></div>
+  <div className="p-6 space-y-5 max-h-[76vh] overflow-y-auto custom-scrollbar bg-[#F8FAFC]">
+    {selectedNCAR.rejectionRemarks && <div className="rounded-xl border border-red-100 bg-red-50 p-4"><p className="text-xs font-semibold uppercase text-red-600">Review feedback</p><p className="mt-1 text-sm text-red-800">{selectedNCAR.rejectionRemarks}</p></div>}
+    <div className="rounded-xl border border-blue-100 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase text-blue-900">NCAR finding</p><p className="mt-1 text-sm text-gray-700">{selectedNCAR.statement}</p></div>
+    <datalist id="cap-responsible-people"><option value="Bob Johnson" /><option value="Charlie Davis" /><option value="Sarah Wilson" /><option value="Michael Brown" /><option value="Alex Johnson" /><option value="Alice Smith" /></datalist>
+    <datalist id="cap-auditee-people">{users.filter(user => user.role === 'AUDITEE').map(user => <option key={user.id} value={user.name} />)}</datalist>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Impact Assessment</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Response Date</span><input required type="date" value={apFormData.responseDate} onChange={e => setApFormData({...apFormData, responseDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Consequence/Impact to Process or Business Unit</span><textarea required rows={3} value={apFormData.consequenceImpact} onChange={e => setApFormData({...apFormData, consequenceImpact: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the effect on the process or business unit." /></label></div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Immediate Correction</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Immediate Correction</span><textarea required rows={3} value={apFormData.correction} onChange={e => setApFormData({...apFormData, correction: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the immediate steps taken to address the NC." /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Person Responsible <span className="font-normal text-gray-400">(Manager default)</span></span><input required list="cap-responsible-people" value={apFormData.correctionResponsible} onChange={e => setApFormData({...apFormData, correctionResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search or enter a name" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Correction Target Date</span><input required type="date" value={apFormData.correctionTargetDate} onChange={e => setApFormData({...apFormData, correctionTargetDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Additional Person Responsible (Auditee) <span className="font-normal text-gray-400">(Optional)</span></span><input list="cap-auditee-people" value={apFormData.correctionAdditionalAuditeeResponsible} onChange={e => setApFormData({...apFormData, correctionAdditionalAuditeeResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search auditees by name" /></label></div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Root Cause Analysis</h5><div className="space-y-4"><label className="block space-y-1.5 text-xs font-medium text-gray-600"><span>Root Cause Analysis</span><textarea required rows={4} value={apFormData.rootCause} onChange={e => setApFormData({...apFormData, rootCause: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Identify the underlying cause." /></label><fieldset><legend className="mb-2 text-xs font-medium text-gray-600">Can the NC occur elsewhere?</legend><div className="flex gap-5">{(['Yes', 'No'] as const).map(answer => <label key={answer} className="flex items-center gap-2 text-sm text-gray-700"><input type="radio" name="cap-occurs-elsewhere" required checked={apFormData.canOccurElsewhere === answer} onChange={() => setApFormData({...apFormData, canOccurElsewhere: answer})} />{answer}</label>)}</div></fieldset>{apFormData.canOccurElsewhere === 'Yes' && <label className="block space-y-1.5 text-xs font-medium text-gray-600"><span>Details</span><textarea required rows={3} value={apFormData.elsewhereDetails} onChange={e => setApFormData({...apFormData, elsewhereDetails: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Identify other processes or business units that may be affected." /></label>}</div></section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h5 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#172554]">Corrective Action Plan</h5><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Corrective Action Plan</span><textarea required rows={4} value={apFormData.actionPlan} onChange={e => setApFormData({...apFormData, actionPlan: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Describe the actions that will prevent recurrence." /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>Person Responsible <span className="font-normal text-gray-400">(Manager default)</span></span><input required list="cap-responsible-people" value={apFormData.responsible} onChange={e => setApFormData({...apFormData, responsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search or enter a name" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600"><span>CAP Target Date</span><input required type="date" value={apFormData.capTargetDate} onChange={e => setApFormData({...apFormData, capTargetDate: e.target.value, dueDate: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label><label className="space-y-1.5 text-xs font-medium text-gray-600 sm:col-span-2"><span>Additional Person Responsible (Auditee) <span className="font-normal text-gray-400">(Optional)</span></span><input list="cap-auditee-people" value={apFormData.additionalAuditeeResponsible} onChange={e => setApFormData({...apFormData, additionalAuditeeResponsible: e.target.value})} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" placeholder="Search auditees by name" /></label></div></section>
+  </div>
+  <div className="flex flex-wrap justify-end gap-3 border-t border-gray-100 bg-white p-5 sm:px-6"><button type="button" onClick={() => saveActionPlan(true)} className="rounded-lg border border-[#172554] bg-white px-5 py-2.5 text-sm font-semibold text-[#172554] hover:bg-blue-50">Save as Draft</button><button type="submit" className="flex items-center gap-2 rounded-lg bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Send size={16} /> Submit</button></div>
+</form>
             )}
           </div>
         </div>
