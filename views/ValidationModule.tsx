@@ -144,15 +144,62 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
 
   const handleApprove = (id: string) => {
     if (!isLead) return;
-    setNcars(prev => prev.map(n => n.id === id ? { ...n, status: NCARStatus.CAP_LEAD_APPROVED, rejectionRemarks: undefined } : n));
-    onNotify(`NCAR ${id} approved by the Lead Auditor and sent to the Head Manager for final approval.`, 'success');
+    const isHead = role === 'HEAD_MANAGER';
+    const target = ncars.find(n => n.id === id);
+    if (!target) return;
+    const now = new Date().toISOString();
+
+    if (target.status === NCARStatus.CAP_LEAD_APPROVED && isHead) {
+      const trailEntry = {
+        id: `trail-${Date.now()}`,
+        action: 'HEAD_APPROVED' as const,
+        actionLabel: 'Final Approved by Head Manager',
+        performedBy: 'Head Manager',
+        role: 'HEAD_MANAGER' as Role,
+        timestamp: now,
+        previousStatus: target.status,
+        newStatus: NCARStatus.CLOSED,
+        comments: 'Head Manager granted final approval for CAP validation.'
+      };
+      setNcars(prev => prev.map(n => n.id === id ? { ...n, status: NCARStatus.CLOSED, isEscalated: false, rejectionRemarks: undefined, auditTrail: [trailEntry, ...(n.auditTrail || [])] } : n));
+      onNotify(`NCAR ${id} received final approval from Head Manager.`, 'success');
+    } else {
+      const trailEntry = {
+        id: `trail-${Date.now()}`,
+        action: 'LEAD_APPROVED' as const,
+        actionLabel: 'Approved by Lead Auditor',
+        performedBy: 'Lead Auditor',
+        role: 'LEAD_AUDITOR' as Role,
+        timestamp: now,
+        previousStatus: target.status,
+        newStatus: NCARStatus.CAP_LEAD_APPROVED,
+        comments: 'Lead Auditor approved CAP validation. Forwarded to Head Manager for final approval.'
+      };
+      setNcars(prev => prev.map(n => n.id === id ? { ...n, status: NCARStatus.CAP_LEAD_APPROVED, rejectionRemarks: undefined, auditTrail: [trailEntry, ...(n.auditTrail || [])] } : n));
+      onNotify(`NCAR ${id} approved by the Lead Auditor and sent to the Head Manager for final approval.`, 'success');
+    }
     setViewingNCARId(null);
   };
 
   const finalizeRejection = () => {
     if (!viewingNCARId || !rejectionRemarks.trim()) return;
-    setNcars(prev => prev.map(n => n.id === viewingNCARId ? { ...n, status: NCARStatus.REOPENED, rejectionRemarks: rejectionRemarks } : n));
-    onNotify(`NCAR ${viewingNCARId} Reopened: ${rejectionRemarks}`, 'warning');
+    const target = ncars.find(n => n.id === viewingNCARId);
+    const now = new Date().toISOString();
+    const isHead = role === 'HEAD_MANAGER';
+    const newStatus = isHead ? NCARStatus.REJECTED : NCARStatus.REOPENED;
+    const trailEntry = {
+      id: `trail-${Date.now()}`,
+      action: (isHead ? 'HEAD_REJECTED' : 'LEAD_RETURNED') as any,
+      actionLabel: isHead ? 'Rejected by Head Manager' : 'Returned for Revision by Lead Auditor',
+      performedBy: isHead ? 'Head Manager' : 'Lead Auditor',
+      role,
+      timestamp: now,
+      previousStatus: target?.status,
+      newStatus,
+      comments: rejectionRemarks.trim()
+    };
+    setNcars(prev => prev.map(n => n.id === viewingNCARId ? { ...n, status: newStatus, rejectionRemarks: rejectionRemarks.trim(), auditTrail: [trailEntry, ...(n.auditTrail || [])] } : n));
+    onNotify(isHead ? `NCAR ${viewingNCARId} Rejected by Head Manager: ${rejectionRemarks}` : `NCAR ${viewingNCARId} Reopened: ${rejectionRemarks}`, 'warning');
     setViewingNCARId(null);
     setShowRejectModal(false);
     setRejectionRemarks('');
@@ -433,8 +480,22 @@ const ValidationModule: React.FC<ValidationModuleProps> = ({ ncars, actionPlans,
                       <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
                         <div className="text-xs font-bold text-gray-400">Audit Ref: <span className="text-blue-500 font-black">{n.auditPlanId}</span></div>
                         <div className="flex gap-4">
-                          {isLead && n.status === NCARStatus.ACTION_PLAN_SUBMITTED && (
-                            <><button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50"><XCircle size={18} />Reject</button><button onClick={() => handleApprove(n.id)} className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest"><CheckCircle2 size={18} />Approve</button></>
+                          {((role === 'LEAD_AUDITOR' && n.status === NCARStatus.ACTION_PLAN_SUBMITTED) ||
+                            (role === 'HEAD_MANAGER' && (n.status === NCARStatus.CAP_LEAD_APPROVED || n.status === NCARStatus.ACTION_PLAN_SUBMITTED))) && (
+                            <>
+                              <button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-10 py-4 bg-white border-2 border-red-100 text-red-600 rounded-2xl font-bold hover:bg-red-50 transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-50">
+                                <XCircle size={18} />Reject
+                              </button>
+                              <button onClick={() => handleApprove(n.id)} className="flex items-center gap-2 px-12 py-4 bg-[#172554] text-white rounded-2xl font-bold hover:bg-[#1E3268] shadow-2xl uppercase text-xs tracking-widest">
+                                <CheckCircle2 size={18} />{role === 'HEAD_MANAGER' && n.status === NCARStatus.CAP_LEAD_APPROVED ? 'Final Approve' : 'Approve for Head Review'}
+                              </button>
+                            </>
+                          )}
+                          {role === 'LEAD_AUDITOR' && n.status === NCARStatus.CAP_LEAD_APPROVED && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-xl border border-purple-200 text-xs font-semibold">
+                              <Clock size={16} />
+                              <span>Approved by Lead Auditor · Awaiting Head Manager Final Approval</span>
+                            </div>
                           )}
                           {isAuditee && (n.status === NCARStatus.REOPENED || n.status === NCARStatus.REJECTED) && (
                             <div className="flex gap-4">

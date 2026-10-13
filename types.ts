@@ -81,7 +81,20 @@ export interface NCAR {
     status: 'On Track' | 'Due Soon' | 'Overdue' | 'Submitted';
     notificationHistory: { type: 'due-soon' | 'overdue'; notifiedAt: string }[];
   };
+  auditTrail?: NCARAuditTrailEntry[];
   ofiResponse?: OFIResponse;
+}
+
+export interface NCARAuditTrailEntry {
+  id: string;
+  action: 'PART1_SUBMITTED' | 'PART2_SUBMITTED' | 'LEAD_APPROVED' | 'LEAD_RETURNED' | 'HEAD_APPROVED' | 'HEAD_REJECTED' | 'DRAFT_SAVED' | 'ESCALATED' | 'COMMENT_ADDED';
+  actionLabel: string;
+  performedBy: string;
+  role: Role;
+  timestamp: string;
+  comments?: string;
+  previousStatus?: NCARStatus | string;
+  newStatus?: NCARStatus | string;
 }
 
 export type OFIResponseStatus = 'Pending' | 'Accepted' | 'Rejected' | 'In Progress' | 'Implemented';

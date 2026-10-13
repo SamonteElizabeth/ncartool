@@ -103,10 +103,10 @@ const AnalyticsModule: React.FC<AnalyticsModuleProps> = ({ ncars, actionPlans, u
         dept: manager.dept,
         reportsTo: manager.reportsTo,
         totalNCARs: managedNCARs.length,
-        escalated: managedNCARs.filter(n => n.isEscalated).length,
+        escalated: managedNCARs.filter(n => n.isEscalated && n.status !== NCARStatus.CLOSED && n.status !== NCARStatus.APPROVED).length,
         avgResponseTAT,
         capTimeliness,
-        score: Math.max(0, 100 - (managedNCARs.filter(n => n.isEscalated).length * 20) - (managedNCARs.filter(n => n.status !== NCARStatus.CLOSED).length * 5))
+        score: Math.max(0, 100 - (managedNCARs.filter(n => n.isEscalated && n.status !== NCARStatus.CLOSED && n.status !== NCARStatus.APPROVED).length * 20) - (managedNCARs.filter(n => n.status !== NCARStatus.CLOSED).length * 5))
       };
     });
   }, [filteredNCARs, actionPlans, users]);

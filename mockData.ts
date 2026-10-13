@@ -73,7 +73,19 @@ export const INITIAL_NCARS: NCAR[] = [
     deadline: '2023-09-23T10:00:00Z',
     auditType: 'Quality/InfoSec',
     processName: 'Access Control',
-    isEscalated: false
+    isEscalated: false,
+    auditTrail: [
+      {
+        id: 'trail-001',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'Alice Smith',
+        role: 'AUDITOR',
+        timestamp: '2023-09-16T10:00:00Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding logged by auditor. 5 working-day response SLA started.'
+      }
+    ]
   },
   {
     id: 'NCAR_000002_202310',
@@ -87,12 +99,35 @@ export const INITIAL_NCARS: NCAR[] = [
     auditor: 'John Doe',
     auditee: 'Bob Johnson',
     createdAt: '2023-10-02T14:30:00Z',
-      status: NCARStatus.ACTION_PLAN_SUBMITTED,
+    status: NCARStatus.ACTION_PLAN_SUBMITTED,
     deadline: '2023-10-09T14:30:00Z',
     auditType: 'Financial',
     processName: 'Expense Management',
     isEscalated: false,
-    responseAt: '2023-10-04T09:00:00Z'
+    responseAt: '2023-10-04T09:00:00Z',
+    auditTrail: [
+      {
+        id: 'trail-002-1',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'John Doe',
+        role: 'LEAD_AUDITOR',
+        timestamp: '2023-10-02T14:30:00Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding logged and assigned to auditee.'
+      },
+      {
+        id: 'trail-002-2',
+        action: 'PART2_SUBMITTED',
+        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        performedBy: 'Bob Johnson',
+        role: 'AUDITEE',
+        timestamp: '2023-10-04T09:00:00Z',
+        previousStatus: NCARStatus.PART1_SUBMITTED,
+        newStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        comments: 'Immediate correction, root cause analysis, and proposed CAP submitted for Lead Auditor review.'
+      }
+    ]
   },
   {
     id: 'NCAR_000003_202311',
@@ -112,7 +147,41 @@ export const INITIAL_NCARS: NCAR[] = [
     rejectionRemarks: 'The proposed corrective action only addresses the backlog but does not identify the root cause of why the updates were missed initially.',
     auditType: 'Quality/InfoSec',
     processName: 'Asset Management',
-    isEscalated: true
+    isEscalated: true,
+    auditTrail: [
+      {
+        id: 'trail-003-1',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'John Doe',
+        role: 'LEAD_AUDITOR',
+        timestamp: '2023-11-11T11:00:00Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding logged and assigned to auditee.'
+      },
+      {
+        id: 'trail-003-2',
+        action: 'PART2_SUBMITTED',
+        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        performedBy: 'Alice Smith',
+        role: 'AUDITEE',
+        timestamp: '2023-11-14T15:00:00Z',
+        previousStatus: NCARStatus.PART1_SUBMITTED,
+        newStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        comments: 'Proposed corrective action plan submitted.'
+      },
+      {
+        id: 'trail-003-3',
+        action: 'LEAD_RETURNED',
+        actionLabel: 'Returned for Revision by Lead Auditor',
+        performedBy: 'John Doe',
+        role: 'LEAD_AUDITOR',
+        timestamp: '2023-11-15T10:00:00Z',
+        previousStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        newStatus: NCARStatus.REOPENED,
+        comments: 'The proposed corrective action only addresses the backlog but does not identify the root cause of why the updates were missed initially.'
+      }
+    ]
   },
   {
     id: 'NCAR_000004_202312',
@@ -138,7 +207,52 @@ export const INITIAL_NCARS: NCAR[] = [
     managerResponsible: 'Bob Johnson',
     departmentResponsible: 'DISD',
     issuingAuditor: 'John Doe',
-    createdByRole: 'AUDITOR'
+    createdByRole: 'AUDITOR',
+    auditTrail: [
+      {
+        id: 'trail-004-1',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'John Doe',
+        role: 'AUDITOR',
+        timestamp: '2023-12-05T09:00:00Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding logged.'
+      },
+      {
+        id: 'trail-004-2',
+        action: 'PART2_SUBMITTED',
+        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        performedBy: 'Bob Johnson',
+        role: 'AUDITEE',
+        timestamp: '2023-12-10T11:00:00Z',
+        previousStatus: NCARStatus.PART1_SUBMITTED,
+        newStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        comments: 'Part 2 submitted.'
+      },
+      {
+        id: 'trail-004-3',
+        action: 'LEAD_APPROVED',
+        actionLabel: 'Approved by Lead Auditor',
+        performedBy: 'John Doe',
+        role: 'LEAD_AUDITOR',
+        timestamp: '2023-12-12T14:00:00Z',
+        previousStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        newStatus: NCARStatus.CAP_LEAD_APPROVED,
+        comments: 'Lead Auditor verified and recommended for approval.'
+      },
+      {
+        id: 'trail-004-4',
+        action: 'HEAD_APPROVED',
+        actionLabel: 'Final Approved by Head Manager',
+        performedBy: 'Head Manager',
+        role: 'HEAD_MANAGER',
+        timestamp: '2023-12-15T16:00:00Z',
+        previousStatus: NCARStatus.CAP_LEAD_APPROVED,
+        newStatus: NCARStatus.APPROVED,
+        comments: 'Approved by Head Manager.'
+      }
+    ]
   },
   {
     id: 'NCAR2026-SLA-001',
@@ -153,7 +267,7 @@ export const INITIAL_NCARS: NCAR[] = [
     auditor: 'John Doe',
     auditee: 'Bob Johnson',
     createdAt: '2026-09-30T08:00:00.000Z',
-    status: NCARStatus.APPROVED,
+    status: NCARStatus.PART1_SUBMITTED,
     deadline: '2026-10-08',
     auditType: 'Financial',
     processName: 'Expense Management',
@@ -166,7 +280,19 @@ export const INITIAL_NCARS: NCAR[] = [
     issuingAuditor: 'John Doe',
     createdByRole: 'AUDITOR',
     assignedByAuditReportId: 'AR-2026-SLA-001',
-    assignedAt: '2026-10-01T01:00:00.000Z'
+    assignedAt: '2026-10-01T01:00:00.000Z',
+    auditTrail: [
+      {
+        id: 'trail-sla-1',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'John Doe',
+        role: 'AUDITOR',
+        timestamp: '2026-10-01T01:00:00.000Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding submitted via Audit Report AR-2026-SLA-001. 5-working-day SLA initiated for Bob Johnson.'
+      }
+    ]
   },
   {
     id: 'OFI2026-AR-001',
@@ -207,7 +333,7 @@ export const INITIAL_AUDIT_REPORTS: AuditReport[] = [{
   preparedBy: 'John Doe',
   releaseDate: '2026-10-13',
   confidentiality: 'Confidential',
-  objectives: 'Review expense processing and approval controls.',
+  objectives: '• Review expense processing and approval controls.',
   conclusion: 'Controls are operating, with an opportunity to improve approval trend monitoring.',
   ncarIds: [],
   ofiIds: ['OFI2026-AR-001'],
@@ -228,7 +354,7 @@ export const INITIAL_AUDIT_REPORTS: AuditReport[] = [{
   preparedBy: 'John Doe',
   releaseDate: '2026-10-01',
   confidentiality: 'Confidential',
-  objectives: 'Review the timeliness and documentation of expense approvals.',
+  objectives: '• Review the timeliness and documentation of expense approvals.',
   conclusion: 'An NCAR was issued and assigned to the responsible auditee.',
   ncarIds: ['NCAR2026-SLA-001'],
   ofiIds: [],

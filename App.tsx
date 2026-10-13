@@ -146,6 +146,14 @@ const App: React.FC = () => {
         timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
         ...(headManager ? { recipientName: headManager } : {}),
         relatedRecordId: report.id
+      })),
+      ...ncars.filter(ncar => ncar.status === NCARStatus.CAP_LEAD_APPROVED).map(ncar => ({
+        id: `ncar-head-review-${ncar.id}`,
+        message: `NCAR ${ncar.id} was approved by the Lead Auditor and is awaiting your final approval in Pending Review.`,
+        type: 'info' as const,
+        timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+        ...(headManager ? { recipientName: headManager } : {}),
+        relatedRecordId: ncar.id
       }))
     ];
     if (reviewNotifications.length) setNotifications(current => [
@@ -500,13 +508,27 @@ const App: React.FC = () => {
               </button>
               
               {/* Profile Dropdown */}
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform origin-top-right scale-95 group-hover:scale-100">
-                <div className="p-2">
+              <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform origin-top-right scale-95 group-hover:scale-100 p-2">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
+                  Switch Role
+                </div>
+                {(['LEAD_AUDITOR', 'HEAD_MANAGER', 'AUDITOR', 'AUDITEE'] as Role[]).map(r => (
+                  <button
+                    key={r}
+                    onClick={() => handleLogin(r)}
+                    className={`w-full text-left px-3 py-1.5 text-xs rounded-xl transition ${
+                      currentRole === r ? 'bg-blue-50 text-[#172554] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {r.toLowerCase().replace('_', ' ')}
+                  </button>
+                ))}
+                <div className="border-t border-gray-100 mt-1 pt-1">
                   <button 
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                   >
-                    <LogOut size={18} />
+                    <LogOut size={15} />
                     Logout
                   </button>
                 </div>

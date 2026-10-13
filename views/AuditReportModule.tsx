@@ -223,8 +223,8 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       if (!editing.linkedAuditPlanId) errors.push('Linked Audit Plan is required.');
       if (!editing.preparedBy) errors.push('Prepared By is required.');
       if (!editing.releaseDate) errors.push('Release Date is required.');
-      if (!editing.confidentiality) errors.push('Confidentiality is required.');
-      if (!editing.objectives.trim()) errors.push('Audit Objectives are required.');
+      const hasObjectivesContent = editing.objectives.replace(/[•\s\n-]/g, '').trim().length > 0;
+      if (!hasObjectivesContent) errors.push('Audit Objectives are required.');
       if (!editing.conclusion.trim()) errors.push('Audit Conclusion is required.');
       if (status === 'Awaiting Auditee Responses') {
         const findingIds = [...new Set([...editing.ncarIds, ...editing.ofiIds])];
@@ -373,9 +373,12 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
   const addFinding = () => {
     if (!editing || !pickerType || !previewFinding) return;
     const isOFI = pickerType === 'OFI';
-    const currentIds = isOFI ? editing.ofiIds : editing.ncarIds;
+    const currentIds = isOFI ? (editing.ofiIds || []) : (editing.ncarIds || []);
     if (!currentIds.includes(previewFinding.id)) {
-      updateReport(isOFI ? { ofiIds: [...currentIds, previewFinding.id], resultsGeneratedAt: undefined } : { ncarIds: [...currentIds, previewFinding.id], resultsGeneratedAt: undefined });
+      updateReport(isOFI 
+        ? { ofiIds: [...new Set([...currentIds, previewFinding.id])], resultsGeneratedAt: undefined } 
+        : { ncarIds: [...new Set([...currentIds, previewFinding.id])], resultsGeneratedAt: undefined }
+      );
     }
     setPickerType(null);
     setPreviewId('');
@@ -448,7 +451,10 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     const issueDate = new Date().toISOString().slice(0, 10);
     const year = issueDate.slice(0, 4);
     const prefix = `NCAR${year}-AR-`;
-    const nextNumber = ncars.filter(ncar => ncar.id.startsWith(prefix)).length + 1;
+    let nextNumber = ncars.filter(ncar => ncar.id.startsWith(prefix)).length + 1;
+    while (ncars.some(ncar => ncar.id === `${prefix}${String(nextNumber).padStart(3, '0')}`)) {
+      nextNumber += 1;
+    }
     const id = `${prefix}${String(nextNumber).padStart(3, '0')}`;
     const plan = auditPlans.find(item => item.id === editing.linkedAuditPlanId);
     const finding: NCAR = {
@@ -457,7 +463,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       statement: ncarDraft.statement.trim(),
       evidence: ncarDraft.evidence.trim(),
       evidenceAttachments: ncarDraft.evidenceAttachments,
-      requirement: '',
+      requirement: ncarDraft.requirement.trim(),
       findingType: ncarDraft.findingType,
       standardClause: ncarDraft.clause.trim(),
       clauseNumber: ncarDraft.clause.trim(),
@@ -478,8 +484,8 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       issuingAuditor: ncarDraft.issuingAuditor.trim() || currentUserName,
       createdByRole: role
     };
-    setNcars(current => [finding, ...current]);
-    updateReport({ ncarIds: [...editing.ncarIds, id], resultsGeneratedAt: undefined });
+    setNcars(current => [finding, ...current.filter(n => n.id !== id)]);
+    updateReport({ ncarIds: [...new Set([...editing.ncarIds, id])], resultsGeneratedAt: undefined });
     setNcarDraft(null);
     setEditingFindingId(null);
   };
@@ -632,6 +638,104 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     else updateClause({ ofiIds: nextValues });
   };
 
+  const handleObjectivesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!editing) return;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const textarea = e.currentTarget;
+      const val = textarea.value;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Find the start and end of the current line
+      const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+      const lineEndIndex = val.indexOf('\n', start);
+      const lineEnd = lineEndIndex === -1 ? val.length : lineEndIndex;
+      const currentLine = val.slice(lineStart, lineEnd);
+      const trimmedLine = currentLine.trim();
+
+      // Check if current line is an empty bullet (e.g. "•", "-", "*", "• ")
+      const isEmptyBullet = /^([•\-*]|\d+\.)\s*$/.test(trimmedLine);
+
+      if (isEmptyBullet) {
+        // Like Microsoft Word: pressing Enter on an empty bullet removes the bullet and exits list mode
+        const beforeLine = val.slice(0, lineStart);
+        const afterLine = val.slice(lineEnd);
+        const nextVal = beforeLine + afterLine;
+        updateReport({ objectives: nextVal });
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = lineStart;
+        }, 0);
+        return;
+      }
+
+      // Check if current line already has a bullet prefix
+      const hasBullet = /^\s*([•\-*]|\d+\.)\s+/.test(currentLine);
+
+      if (!hasBullet && trimmedLine.length > 0) {
+        // Current line wasn't bulleted yet: prepend '• ' to current line and add '\n• ' for the next line
+        const lineContentBefore = val.slice(lineStart, start);
+        const afterCursor = val.slice(end);
+        const nextVal = val.slice(0, lineStart) + '• ' + lineContentBefore + '\n• ' + afterCursor;
+        const newCursorPos = start + 2 + 3; // +2 for '• ' added at lineStart, +3 for '\n• '
+        updateReport({ objectives: nextVal });
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+        }, 0);
+      } else {
+        // Line already has bullet or was empty: add newline and new bullet
+        const beforeCursor = val.slice(0, start);
+        const afterCursor = val.slice(end);
+        const nextVal = beforeCursor + '\n• ' + afterCursor;
+        const newCursorPos = start + 3; // length of '\n• '
+        updateReport({ objectives: nextVal });
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+        }, 0);
+      }
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      const textarea = e.currentTarget;
+      const val = textarea.value;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      if (start === end) {
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const textBeforeCursorOnLine = val.slice(lineStart, start);
+        // If cursor is right after "• " at the start of the line, remove the bullet like Word
+        if (/^\s*•\s?$/.test(textBeforeCursorOnLine)) {
+          e.preventDefault();
+          const nextVal = val.slice(0, lineStart) + val.slice(start);
+          updateReport({ objectives: nextVal });
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = lineStart;
+          }, 0);
+        }
+      }
+    }
+  };
+
+  const handleObjectivesFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    if (!editing) return;
+    if (!editing.objectives || editing.objectives.trim() === '') {
+      updateReport({ objectives: '• ' });
+      setTimeout(() => {
+        e.target.selectionStart = e.target.selectionEnd = 2;
+      }, 0);
+    }
+  };
+
+  const handleObjectivesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    let val = e.target.value;
+    // Word auto-format: convert leading "- " or "* " to "• "
+    val = val.replace(/(^|\n)[-*]\s+/g, '$1• ');
+    updateReport({ objectives: val });
+  };
+
   const renderFindingPicker = () => {
     if (!pickerType) return null;
     const alreadyLinked = pickerType === 'NCAR' ? editing?.ncarIds || [] : editing?.ofiIds || [];
@@ -749,13 +853,110 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
           <label><span className={formLabel}>Confidentiality <b className="text-red-500">*</b></span><select className={inputClass} value={editing.confidentiality} disabled={isReadOnly && editingSection !== 'Details'} onChange={event => updateReport({ confidentiality: event.target.value })}><option value="">Select confidentiality</option><option>Confidential</option><option>Internal</option><option>Public</option></select></label>
         </div>{!isReadOnly && <div className="flex justify-end border-t border-gray-100 pt-4"><button type="button" onClick={() => continueTo('Objectives')} className="rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">Next</button></div>}</section>}
 
-        {activeTab === 'Objectives' && <section className="space-y-5"><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-bold text-gray-800">Objectives and Conclusion</h2><p className="mt-1 text-sm text-gray-500">Enter the audit objectives and your conclusion.</p></div>{renderSectionEditControls('Objectives')}</div><label className="block"><span className={formLabel}>Audit Objectives <b className="text-red-500">*</b></span><textarea rows={7} className={inputClass} value={editing.objectives} disabled={isReadOnly && editingSection !== 'Objectives'} onChange={event => updateReport({ objectives: event.target.value })} placeholder="Enter audit objectives" /></label><label className="block"><span className={formLabel}>Audit Conclusion <b className="text-red-500">*</b></span><textarea rows={7} className={inputClass} value={editing.conclusion} disabled={isReadOnly && editingSection !== 'Objectives'} onChange={event => updateReport({ conclusion: event.target.value })} placeholder="Enter audit conclusion" /></label>{!isReadOnly && <div className="flex justify-end border-t border-gray-100 pt-4"><button type="button" onClick={() => continueTo('NCAR Log')} className="rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">Next</button></div>}</section>}
+        {activeTab === 'Objectives' && (
+          <section className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Objectives and Conclusion</h2>
+                <p className="mt-1 text-sm text-gray-500">Enter the audit objectives and your conclusion.</p>
+              </div>
+              {renderSectionEditControls('Objectives')}
+            </div>
+            <label className="block">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={formLabel}>Audit Objectives <b className="text-red-500">*</b></span>
+                <span className="text-[11px] text-gray-400 font-normal">Press Enter for automatic bullet list (Word style)</span>
+              </div>
+              <textarea 
+                rows={7} 
+                className={inputClass} 
+                value={editing.objectives} 
+                disabled={isReadOnly && editingSection !== 'Objectives'} 
+                onFocus={handleObjectivesFocus}
+                onKeyDown={handleObjectivesKeyDown}
+                onChange={handleObjectivesChange} 
+                placeholder="• Enter audit objectives" 
+              />
+            </label>
+            <label className="block">
+              <span className={formLabel}>Audit Conclusion <b className="text-red-500">*</b></span>
+              <textarea 
+                rows={7} 
+                className={inputClass} 
+                value={editing.conclusion} 
+                disabled={isReadOnly && editingSection !== 'Objectives'} 
+                onChange={event => updateReport({ conclusion: event.target.value })} 
+                placeholder="Enter audit conclusion" 
+              />
+            </label>
+            {!isReadOnly && (
+              <div className="flex justify-end border-t border-gray-100 pt-4">
+                <button type="button" onClick={() => continueTo('NCAR Log')} className="rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">
+                  Next
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         {(activeTab === 'NCAR Log' || activeTab === 'OFI Log') && (() => {
           const isOFI = activeTab === 'OFI Log';
           const rows = isOFI ? reportOfis : reportNcars;
           return <section className="space-y-4"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><h2 className="text-lg font-bold text-gray-800">{activeTab}</h2><p className="mt-1 text-sm text-gray-500">Step {isOFI ? 4 : 3} of 6 · {isOFI ? 'Opportunities for improvement linked to this report.' : 'Nonconformity findings linked to this report.'}</p></div><div className="flex flex-wrap gap-2">{!isReadOnly && <button type="button" onClick={() => isOFI ? setOfiDraft(blankReportOfi(currentUserName)) : setNcarDraft(blankReportNcar(currentUserName))} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#172554] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Plus size={16} /> Add {isOFI ? 'OFI' : 'NCAR'}</button>}</div></div>
-            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">{rows.length === 0 ? <p className="px-5 py-10 text-center text-sm text-gray-400">No {isOFI ? 'OFI' : 'NCAR'} findings have been created or linked to this report yet.</p> : <ul className="divide-y divide-gray-100">{rows.map(finding => <li key={finding.id} className="flex items-start justify-between gap-4 px-4 py-4 transition hover:bg-blue-50/30 sm:px-5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-[#172554]">{finding.id}</span><span className="text-xs text-gray-500">{finding.findingType === 'OFI' ? 'Opportunity for Improvement' : `${finding.findingType} NCAR`}</span></div><p className="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-800">{finding.statement || 'No finding statement provided.'}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500"><span>{finding.systemType || 'Management system not specified'}</span><span>Clause: {finding.clauseNumber || finding.standardClause || '—'}</span><span>Department: {finding.departmentResponsible || finding.area || '—'}</span><span>Responsible: {finding.managerResponsible || finding.auditee || '—'}</span>{!isOFI && <span>NCAR Response Date: {finding.deadline || 'Set on approval'}</span>}</div></div><div className="flex shrink-0 items-center gap-1">{canEditFindings && <button type="button" onClick={() => openFindingEditor(finding)} aria-label={`Edit ${finding.id}`} title="Edit finding" className="rounded-lg p-2 text-[#172554] hover:bg-blue-50"><Pencil size={15} /></button>}{!isReadOnly && <button type="button" onClick={() => removeFinding(isOFI ? 'OFI' : 'NCAR', finding.id)} aria-label={`Unlink ${finding.id}`} title="Unlink finding from report" className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"><X size={15} /></button>}</div></li>)}</ul>}</div>
+            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">{rows.length === 0 ? <p className="px-5 py-10 text-center text-sm text-gray-400">No {isOFI ? 'OFI' : 'NCAR'} findings have been created or linked to this report yet.</p> : <ul className="divide-y divide-gray-100">{rows.map(finding => {
+              const slaStatus = !isOFI ? (finding.responseSla?.status || (finding.assignedAt ? 'On Track' : undefined)) : undefined;
+              return (
+                <li key={finding.id} className="flex items-start justify-between gap-4 px-4 py-4 transition hover:bg-blue-50/30 sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-[#172554]">{finding.id}</span>
+                      <span className="text-xs text-gray-500">{finding.findingType === 'OFI' ? 'Opportunity for Improvement' : `${finding.findingType} NCAR`}</span>
+                      {!isOFI && (
+                        <>
+                          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                            finding.status === NCARStatus.APPROVED || finding.status === NCARStatus.CLOSED ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                            finding.status === NCARStatus.CAP_LEAD_APPROVED ? 'border-purple-200 bg-purple-50 text-purple-700' :
+                            finding.status === NCARStatus.ACTION_PLAN_SUBMITTED ? 'border-amber-200 bg-amber-50 text-amber-800' :
+                            finding.status === NCARStatus.PART1_SUBMITTED ? 'border-blue-200 bg-blue-50 text-blue-700' :
+                            finding.status === NCARStatus.REJECTED || finding.status === NCARStatus.REOPENED ? 'border-rose-200 bg-rose-50 text-rose-700' :
+                            'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}>
+                            Status: {finding.status}
+                          </span>
+                          {slaStatus && (
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                              slaStatus === 'Submitted' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                              slaStatus === 'Overdue' ? 'border-red-200 bg-red-50 text-red-700' :
+                              slaStatus === 'Due Soon' ? 'border-amber-200 bg-amber-50 text-amber-700' :
+                              'border-blue-100 bg-blue-50 text-blue-700'
+                            }`}>
+                              SLA: {slaStatus}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-800">{finding.statement || 'No finding statement provided.'}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                      <span>{finding.systemType || 'Management system not specified'}</span>
+                      <span>Clause: {finding.clauseNumber || finding.standardClause || '—'}</span>
+                      <span>Department: {finding.departmentResponsible || finding.area || '—'}</span>
+                      <span>Responsible: {finding.managerResponsible || finding.auditee || '—'}</span>
+                      {!isOFI && <span>NCAR Response Due: {finding.deadline || '5 working days after assignment'}</span>}
+                    </div>
+                    {finding.rejectionRemarks && (
+                      <p className="mt-2 text-xs text-rose-700 bg-rose-50 p-2 rounded border border-rose-100 font-medium">
+                        Review remarks: {finding.rejectionRemarks}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {canEditFindings && <button type="button" onClick={() => openFindingEditor(finding)} aria-label={`Edit ${finding.id}`} title="Edit finding" className="rounded-lg p-2 text-[#172554] hover:bg-blue-50"><Pencil size={15} /></button>}
+                    {!isReadOnly && <button type="button" onClick={() => removeFinding(isOFI ? 'OFI' : 'NCAR', finding.id)} aria-label={`Unlink ${finding.id}`} title="Unlink finding from report" className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"><X size={15} /></button>}
+                  </div>
+                </li>
+              );
+            })}</ul>}</div>
             {rows.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold text-gray-800">Part 2 Responses</h3>{rows.map(finding => {
               const plan = !isOFI ? actionPlans.find(actionPlan => actionPlan.ncarId === finding.id && !actionPlan.isDraft) : undefined;
               const response = isOFI ? finding.ofiResponse : undefined;

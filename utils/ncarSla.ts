@@ -110,3 +110,56 @@ export const makeResponseSla = (startedAt: string, holidays = getConfiguredPhili
   status: 'On Track',
   notificationHistory: []
 });
+
+export const getWorkingDaysCountdown = (
+  dueDateKey: string,
+  now: Date = new Date(),
+  holidays = getConfiguredPhilippineHolidays()
+): { count: number; isOverdue: boolean; isDueToday: boolean; text: string } => {
+  if (!dueDateKey) return { count: 0, isOverdue: false, isDueToday: false, text: 'No due date' };
+  const targetKey = dueDateKey.slice(0, 10);
+  const todayKey = getPhilippineDateKey(now);
+  const holidaySet = new Set(holidays);
+
+  if (todayKey === targetKey) {
+    return { count: 0, isOverdue: false, isDueToday: true, text: 'Due Today' };
+  }
+
+  if (todayKey > targetKey) {
+    let cursor = parseDateKey(targetKey);
+    const end = parseDateKey(todayKey);
+    let overdueDays = 0;
+    while (cursor < end) {
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      const weekday = cursor.getUTCDay();
+      const key = toDateKey(cursor);
+      if (weekday !== 0 && weekday !== 6 && !holidaySet.has(key)) {
+        overdueDays += 1;
+      }
+    }
+    return {
+      count: overdueDays,
+      isOverdue: true,
+      isDueToday: false,
+      text: overdueDays === 1 ? '1 working day overdue' : `${overdueDays} working days overdue`
+    };
+  }
+
+  let cursor = parseDateKey(todayKey);
+  const end = parseDateKey(targetKey);
+  let remainingDays = 0;
+  while (cursor < end) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const weekday = cursor.getUTCDay();
+    const key = toDateKey(cursor);
+    if (weekday !== 0 && weekday !== 6 && !holidaySet.has(key)) {
+      remainingDays += 1;
+    }
+  }
+  return {
+    count: remainingDays,
+    isOverdue: false,
+    isDueToday: false,
+    text: remainingDays === 1 ? '1 working day left' : `${remainingDays} working days left`
+  };
+};
