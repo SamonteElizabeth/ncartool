@@ -687,12 +687,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       filter: 'Approved' 
     },
     { 
-      label: 'Revision Required / Rejected', 
+      label: 'Rejected', 
       count: ncarFindings.filter(ncar => [NCARStatus.REJECTED, NCARStatus.REOPENED].includes(ncar.status)).length, 
-      caption: 'Comments provided for correction', 
+      caption: 'Rejected need some revision ', 
       icon: CircleX, 
       color: 'red', 
-      filter: 'Returned / Rejected' 
+      filter: 'Rejected' 
     }
   ] as const;
 

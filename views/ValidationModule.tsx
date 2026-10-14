@@ -68,7 +68,7 @@ export const getNCARValidationStage = (ncar: NCAR): {
   if (ncar.status === NCARStatus.REOPENED || ncar.status === NCARStatus.REJECTED || ncar.validationStage === 'RETURNED_FOR_REVISION') {
     return {
       stage: 'RETURNED_FOR_REVISION',
-      label: 'Returned for Revision',
+      label: 'Rejected',
       badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
       dotClass: 'bg-rose-500'
     };
@@ -98,7 +98,7 @@ export const getNCARValidationStage = (ncar: NCAR): {
     if (latest.headReview?.decision === 'Returned' || latest.leadReview?.decision === 'Returned') {
       return {
         stage: 'RETURNED_FOR_REVISION',
-        label: 'Returned for Revision',
+        label: 'Rejected',
         badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
         dotClass: 'bg-rose-500'
       };
@@ -121,7 +121,7 @@ export const getNCARValidationStage = (ncar: NCAR): {
     }
     return {
       stage: 'PENDING_LEAD_REVIEW',
-      label: 'Submitted · Awaiting Lead Review',
+      label: 'Submitted · Awaiting Lead Review', 
       badgeClass: 'bg-blue-50 text-[#172554] border-blue-200',
       dotClass: 'bg-blue-500'
     };
@@ -129,7 +129,7 @@ export const getNCARValidationStage = (ncar: NCAR): {
 
   return {
     stage: 'PENDING_SUBMISSION',
-    label: 'Pending Evidence',
+    label: 'Pending',
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
     dotClass: 'bg-amber-500'
   };
