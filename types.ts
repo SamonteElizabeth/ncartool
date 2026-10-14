@@ -83,11 +83,46 @@ export interface NCAR {
   };
   auditTrail?: NCARAuditTrailEntry[];
   ofiResponse?: OFIResponse;
+  validationSubmissions?: ValidationSubmission[];
+  validationStage?: ValidationStageStatus;
 }
+
+export interface ValidationEvidenceFile {
+  name: string;
+  type?: string;
+  size?: number;
+  dataUrl?: string;
+}
+
+export interface ValidationReviewRecord {
+  reviewedAt: string;
+  reviewedBy: string;
+  role: Role;
+  decision: 'Approved' | 'Returned';
+  comments: string;
+}
+
+export interface ValidationSubmission {
+  id: string;
+  version: number;
+  submittedAt: string;
+  submittedBy: string;
+  remarks: string;
+  evidenceFiles: ValidationEvidenceFile[];
+  leadReview?: ValidationReviewRecord;
+  headReview?: ValidationReviewRecord;
+}
+
+export type ValidationStageStatus = 
+  | 'PENDING_SUBMISSION'
+  | 'PENDING_LEAD_REVIEW'
+  | 'PENDING_HEAD_REVIEW'
+  | 'RETURNED_FOR_REVISION'
+  | 'CLOSED';
 
 export interface NCARAuditTrailEntry {
   id: string;
-  action: 'PART1_SUBMITTED' | 'PART2_SUBMITTED' | 'LEAD_APPROVED' | 'LEAD_RETURNED' | 'HEAD_APPROVED' | 'HEAD_REJECTED' | 'DRAFT_SAVED' | 'ESCALATED' | 'COMMENT_ADDED';
+  action: 'PART1_SUBMITTED' | 'PART2_SUBMITTED' | 'LEAD_APPROVED' | 'LEAD_RETURNED' | 'HEAD_APPROVED' | 'HEAD_REJECTED' | 'DRAFT_SAVED' | 'ESCALATED' | 'COMMENT_ADDED' | string;
   actionLabel: string;
   performedBy: string;
   role: Role;

@@ -181,6 +181,26 @@ export const INITIAL_NCARS: NCAR[] = [
         newStatus: NCARStatus.REOPENED,
         comments: 'The proposed corrective action only addresses the backlog but does not identify the root cause of why the updates were missed initially.'
       }
+    ],
+    validationStage: 'RETURNED_FOR_REVISION',
+    validationSubmissions: [
+      {
+        id: 'vsub-003-1',
+        version: 1,
+        submittedAt: '2023-11-14T15:00:00Z',
+        submittedBy: 'Alice Smith',
+        remarks: 'Asset register spreadsheet updated with all 14 recent IT procurements and assigned custodians.',
+        evidenceFiles: [
+          { name: 'it_asset_register_updated_nov2023.xlsx', size: 45200, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+        ],
+        leadReview: {
+          reviewedAt: '2023-11-15T10:00:00Z',
+          reviewedBy: 'John Doe',
+          role: 'LEAD_AUDITOR',
+          decision: 'Returned',
+          comments: 'The spreadsheet update is acknowledged, but quarterly physical verification logs and server room access audit evidence were not provided. Please attach these.'
+        }
+      }
     ]
   },
   {
@@ -208,6 +228,7 @@ export const INITIAL_NCARS: NCAR[] = [
     departmentResponsible: 'DISD',
     issuingAuditor: 'John Doe',
     createdByRole: 'AUDITOR',
+    validationStage: 'PENDING_SUBMISSION',
     auditTrail: [
       {
         id: 'trail-004-1',
@@ -391,5 +412,16 @@ export const INITIAL_ACTION_PLANS: ActionPlan[] = [
     dueDate: '2023-12-01',
     submittedAt: '2023-11-14T15:00:00Z',
     remarks: 'it_asset_backlog_fix.xlsx'
+  },
+  {
+    id: 'ACT_000003_202312',
+    ncarId: 'NCAR_000004_202312',
+    immediateCorrection: 'Recalled expense report #EXP-7712 and attached missing approval notes.',
+    responsiblePerson: 'Bob Johnson',
+    rootCause: 'Manual bypass of the second-level signature workflow during peak cycle.',
+    correctiveAction: 'Enforce two-stage digital signature gate prior to disbursement.',
+    dueDate: '2023-12-30',
+    submittedAt: '2023-12-10T11:00:00Z',
+    remarks: 'expense_approval_process_update.pdf'
   }
 ];

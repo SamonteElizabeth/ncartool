@@ -334,7 +334,9 @@ const App: React.FC = () => {
           ncars={ncars} 
           actionPlans={actionPlans} 
           setNcars={setNcars}
+          setActionPlans={setActionPlans}
           role={currentRole} 
+          currentUserName={currentUser?.name || ''}
           onNotify={notify}
         />
       );
