@@ -184,8 +184,8 @@ const App: React.FC = () => {
           handledSlaNotifications.current.add(key);
           const findingLabel = ncar.findingType === 'OFI' ? 'OFI' : 'NCAR';
           const message = type === 'due-soon'
-            ? `${findingLabel} ${ncar.id} Part 2 response is ${today === dueDate ? 'due today' : 'due in one working day'} (${dueDate}).`
-            : `${findingLabel} ${ncar.id} Part 2 response is overdue. The due date was ${dueDate}.`;
+            ? `${findingLabel} ${ncar.id} Corrective Action Plan (CAP) is ${today === dueDate ? 'due today' : 'due in one working day'} (${dueDate}).`
+            : `${findingLabel} ${ncar.id} Corrective Action Plan (CAP) is overdue. The due date was ${dueDate}.`;
           const timestamp = now.toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
           notificationsToAdd.push({ id: `ncar-sla-${ncar.id}-${type}`, message, type: 'warning', timestamp, recipientName: auditee, relatedRecordId: ncar.id });
           notificationHistory = [...notificationHistory, { type, notifiedAt: now.toISOString() }];

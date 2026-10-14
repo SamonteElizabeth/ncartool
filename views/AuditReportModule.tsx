@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  AlertCircle, ArrowLeft, Check, CheckCircle2, ChevronDown, CircleCheck, CircleX, ClipboardList, Clock3, Download, FileText,
-  Eye, Pencil, Plus, Search, Trash2, X
+  AlertCircle, ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, Clock3, Download, FileText,
+  Eye, MoreVertical, Pencil, Plus, Search, Trash2, X
 } from 'lucide-react';
 import { ActionPlan, AuditPlan, AuditReport, AuditReportClause, AuditReportStatus, NCAR, NCARStatus, Role, User } from '../types';
 import { getConfiguredPhilippineHolidays, hasSubmittedNCARResponse, makeResponseSla } from '../utils/ncarSla';
@@ -134,7 +134,68 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
   const [editingSection, setEditingSection] = useState<EditableReportSection | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({
+    'OFI2026-AR-001': true,
+    'NCAR2026-AR-001': true
+  });
+  const [viewingFinding, setViewingFinding] = useState<NCAR | null>(null);
+  const [activeMenuFindingId, setActiveMenuFindingId] = useState<string | null>(null);
   const baselineRef = useRef('');
+
+  const toggleRowExpanded = (id: string) => {
+    setExpandedRows(current => ({
+      ...current,
+      [id]: !current[id]
+    }));
+  };
+
+  const getFindingStatusInfo = (finding: NCAR) => {
+    if (finding.findingType === 'OFI') {
+      const ofiStatus = finding.ofiResponse?.status;
+      if (finding.status === NCARStatus.CLOSED || ofiStatus === 'Implemented') {
+        return { label: 'Closed', color: 'slate', icon: CheckCircle2 };
+      }
+      if (ofiStatus === 'In Progress' || ofiStatus === 'Accepted') {
+        return { label: 'In Progress', color: 'green', icon: Check };
+      }
+      if (ofiStatus === 'Rejected') {
+        return { label: 'Rejected', color: 'rose', icon: X };
+      }
+      return { label: 'Pending', color: 'amber', icon: Clock };
+    } else {
+      if (finding.status === NCARStatus.CLOSED || finding.status === NCARStatus.APPROVED) {
+        return { label: 'Closed', color: 'blue', icon: CheckCircle2 };
+      }
+      if (finding.status === NCARStatus.ACTION_PLAN_SUBMITTED || finding.status === NCARStatus.CAP_LEAD_APPROVED) {
+        return { label: 'In Progress', color: 'green', icon: Check };
+      }
+      if (finding.status === NCARStatus.REJECTED || finding.status === NCARStatus.REOPENED) {
+        return { label: 'Rejected', color: 'rose', icon: X };
+      }
+      if (finding.responseSla?.status === 'Overdue') {
+        return { label: 'Overdue', color: 'red', icon: AlertCircle };
+      }
+      return { label: 'Pending', color: 'amber', icon: Clock };
+    }
+  };
+
+  const getBadgeClasses = (color: string) => {
+    switch (color) {
+      case 'green':
+        return 'border border-emerald-200 bg-emerald-50 text-emerald-700';
+      case 'amber':
+        return 'border border-amber-200 bg-amber-50 text-amber-700';
+      case 'blue':
+        return 'border border-blue-200 bg-blue-50 text-blue-700';
+      case 'rose':
+      case 'red':
+        return 'border border-rose-200 bg-rose-50 text-rose-700';
+      case 'slate':
+      default:
+        return 'border border-slate-200 bg-slate-50 text-slate-700';
+    }
+  };
 
   const isEditor = editing !== null;
   const isReadOnly = editing?.status !== 'Draft';
@@ -288,7 +349,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     const findingsToAssign = ncars.filter(ncar => findingIds.includes(ncar.id));
     const incomplete = findingsToAssign.filter(ncar => !hasSubmittedNCARResponse(ncar));
     if (incomplete.length > 0) {
-      onNotify(`Cannot approve yet. These Part 2 responses are still incomplete: ${incomplete.map(ncar => ncar.id).join(', ')}.`, 'warning');
+      onNotify(`Cannot approve yet. These Corrective Action Plans (CAP) are still incomplete: ${incomplete.map(ncar => ncar.id).join(', ')}.`, 'warning');
       return;
     }
 
@@ -332,7 +393,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       ['Confidentiality', editing.confidentiality], ['Status', editing.status], ['Approved By', editing.approvedBy], ['Approved At', editing.approvedAt],
       [], ['Objectives and Conclusion'], ['Audit Objectives', editing.objectives], ['Audit Conclusion', editing.conclusion], [],
       ['NCAR Log'],
-      ['NCAR ID', 'Nonconformity (What went wrong?)', 'Evidence', 'ISO/Business Requirement', 'Finding Type', 'Management System Type', 'Clause', 'Issue Date', 'Process Involved', 'Manager Responsible', 'Department Responsible', 'Issuing Auditor', 'NCAR Response Date', 'Part 2 Response Date', 'Consequence / Impact', 'Immediate Correction', 'Correction Responsible', 'Correction Target Date', 'Root Cause Analysis', 'Can Occur Elsewhere?', 'Elsewhere Details', 'Corrective Action Plan', 'CAP Responsible', 'CAP Target Date'],
+      ['NCAR ID', 'Nonconformity (What went wrong?)', 'Evidence', 'ISO/Business Requirement', 'Finding Type', 'Management System Type', 'Clause', 'Issue Date', 'Process Involved', 'Manager Responsible', 'Department Responsible', 'Issuing Auditor', 'NCAR Response Date', 'CAP Response Date', 'Consequence / Impact', 'Immediate Correction', 'Correction Responsible', 'Correction Target Date', 'Root Cause Analysis', 'Can Occur Elsewhere?', 'Elsewhere Details', 'Corrective Action Plan', 'CAP Responsible', 'CAP Target Date'],
       ...reportNcars.map(finding => {
         const plan = actionPlans.find(actionPlan => actionPlan.ncarId === finding.id && !actionPlan.isDraft);
         return [finding.id, finding.statement, [finding.evidence, ...(finding.evidenceAttachments || []).map(file => file.name)].filter(Boolean).join('; '), finding.requirement, finding.findingType, finding.systemType, finding.clauseNumber || finding.standardClause, finding.issueDate, finding.processInvolved || finding.processName, finding.managerResponsible || finding.auditee, finding.departmentResponsible || finding.area, finding.issuingAuditor || finding.auditor, finding.deadline, plan?.responseDate, plan?.consequenceImpact, plan?.immediateCorrection, plan?.correctionResponsible || plan?.responsiblePerson, plan?.correctionTargetDate, plan?.rootCause, plan?.canOccurElsewhere, plan?.elsewhereDetails, plan?.correctiveAction, plan?.capResponsible || plan?.responsiblePerson, plan?.capTargetDate];
@@ -827,13 +888,12 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
         </div>
       </header>
 
-      <div className="overflow-hidden rounded-2xl border border-[#f2ead9] bg-gradient-to-b from-[#fffaf0] to-[#fffdf8] px-3 py-3 shadow-sm sm:px-4 sm:py-3.5">
-        <div className="overflow-x-auto pb-1"><div className="relative flex min-w-[740px] items-center justify-between gap-1.5" role="tablist" aria-label="Audit report sections">
-          <span aria-hidden="true" className="absolute left-[7%] right-[7%] top-1/2 h-[2px] -translate-y-1/2 bg-slate-300" />
-          {TABS.map((tab, index) => {
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-[#eef3fb] p-2 sm:p-2.5 shadow-sm">
+        <div className="overflow-x-auto pb-0.5"><div className="relative flex min-w-[740px] items-center justify-between gap-2" role="tablist" aria-label="Audit report sections">
+          <span aria-hidden="true" className="absolute left-[5%] right-[5%] top-1/2 h-[2px] -translate-y-1/2 bg-blue-200/80" />
+          {TABS.map((tab) => {
             const active = activeTab === tab;
-            const complete = index < (editing.workflowStep || 0);
-            return <button key={tab} type="button" role="tab" aria-selected={active} onClick={() => setTab(tab)} className={`relative z-10 flex min-w-0 flex-1 items-center justify-center rounded-full border px-2.5 py-2.5 text-xs font-bold transition sm:px-3 sm:py-3 sm:text-sm ${active ? 'border-[#29236f] bg-[#29236f] text-white shadow-md' : complete ? 'border-[#d9d5f5] bg-[#eeecff] text-[#29236f]' : 'border-[#efe7d7] bg-[#fffaf0] text-[#172554]'}`}>
+            return <button key={tab} type="button" role="tab" aria-selected={active} onClick={() => setTab(tab)} className={`relative z-10 flex min-w-0 flex-1 items-center justify-center rounded-2xl sm:rounded-full border px-3 py-2.5 text-xs font-semibold transition sm:text-sm ${active ? 'border-[#0047e1] bg-[#0047e1] text-white shadow-sm font-bold' : 'border-transparent bg-[#e4ecf7] text-[#1e3a8a] hover:bg-[#d8e4f5]'}`}>
               <span className="whitespace-nowrap">{tab}</span>
             </button>;
           })}
@@ -902,72 +962,343 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
         {(activeTab === 'NCAR Log' || activeTab === 'OFI Log') && (() => {
           const isOFI = activeTab === 'OFI Log';
           const rows = isOFI ? reportOfis : reportNcars;
-          return <section className="space-y-4"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><h2 className="text-lg font-bold text-gray-800">{activeTab}</h2><p className="mt-1 text-sm text-gray-500">Step {isOFI ? 4 : 3} of 6 · {isOFI ? 'Opportunities for improvement linked to this report.' : 'Nonconformity findings linked to this report.'}</p></div><div className="flex flex-wrap gap-2">{!isReadOnly && <button type="button" onClick={() => isOFI ? setOfiDraft(blankReportOfi(currentUserName)) : setNcarDraft(blankReportNcar(currentUserName))} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#172554] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]"><Plus size={16} /> Add {isOFI ? 'OFI' : 'NCAR'}</button>}</div></div>
-            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">{rows.length === 0 ? <p className="px-5 py-10 text-center text-sm text-gray-400">No {isOFI ? 'OFI' : 'NCAR'} findings have been created or linked to this report yet.</p> : <ul className="divide-y divide-gray-100">{rows.map(finding => {
-              const slaStatus = !isOFI ? (finding.responseSla?.status || (finding.assignedAt ? 'On Track' : undefined)) : undefined;
-              return (
-                <li key={finding.id} className="flex items-start justify-between gap-4 px-4 py-4 transition hover:bg-blue-50/30 sm:px-5">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-[#172554]">{finding.id}</span>
-                      <span className="text-xs text-gray-500">{finding.findingType === 'OFI' ? 'Opportunity for Improvement' : `${finding.findingType} NCAR`}</span>
-                      {!isOFI && (
-                        <>
-                          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
-                            finding.status === NCARStatus.APPROVED || finding.status === NCARStatus.CLOSED ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
-                            finding.status === NCARStatus.CAP_LEAD_APPROVED ? 'border-purple-200 bg-purple-50 text-purple-700' :
-                            finding.status === NCARStatus.ACTION_PLAN_SUBMITTED ? 'border-amber-200 bg-amber-50 text-amber-800' :
-                            finding.status === NCARStatus.PART1_SUBMITTED ? 'border-blue-200 bg-blue-50 text-blue-700' :
-                            finding.status === NCARStatus.REJECTED || finding.status === NCARStatus.REOPENED ? 'border-rose-200 bg-rose-50 text-rose-700' :
-                            'border-slate-200 bg-slate-50 text-slate-600'
-                          }`}>
-                            Status: {finding.status}
-                          </span>
-                          {slaStatus && (
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                              slaStatus === 'Submitted' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
-                              slaStatus === 'Overdue' ? 'border-red-200 bg-red-50 text-red-700' :
-                              slaStatus === 'Due Soon' ? 'border-amber-200 bg-amber-50 text-amber-700' :
-                              'border-blue-100 bg-blue-50 text-blue-700'
-                            }`}>
-                              SLA: {slaStatus}
-                            </span>
-                          )}
-                        </>
+          const query = logSearch.trim().toLowerCase();
+          const filteredRows = query ? rows.filter(finding =>
+            finding.id.toLowerCase().includes(query) ||
+            (finding.statement || '').toLowerCase().includes(query) ||
+            (finding.departmentResponsible || finding.area || '').toLowerCase().includes(query) ||
+            (finding.managerResponsible || finding.auditee || '').toLowerCase().includes(query)
+          ) : rows;
+
+          return (
+            <section className="space-y-6">
+              {/* Header: Title on Left, Search Bar & Add Button on Right */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-2xl font-extrabold tracking-tight text-[#0a1931] sm:text-3xl">
+                  {activeTab}
+                </h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative min-w-[260px] sm:w-80">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                    <input
+                      type="text"
+                      value={logSearch}
+                      onChange={e => setLogSearch(e.target.value)}
+                      placeholder={isOFI ? 'Search OFI ID or description...' : 'Search NCAR ID or description...'}
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => isOFI ? setOfiDraft(blankReportOfi(currentUserName)) : setNcarDraft(blankReportNcar(currentUserName))}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#0047e1] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#003bbd]"
+                      >
+                        <Plus size={16} /> Add {isOFI ? 'OFI' : 'NCAR'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openPicker(isOFI ? 'OFI' : 'NCAR')}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Link Existing
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Table Container */}
+              <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[840px] border-collapse text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-white text-xs font-semibold text-slate-500">
+                        <th className="w-12 px-4 py-3.5 text-center"></th>
+                        <th className="w-40 px-4 py-3.5 font-semibold text-slate-600">{isOFI ? 'OFI ID' : 'NCAR ID'}</th>
+                        <th className="min-w-[240px] px-4 py-3.5 font-semibold text-slate-600">Description</th>
+                        <th className="w-32 px-4 py-3.5 font-semibold text-slate-600">Department</th>
+                        <th className="w-48 px-4 py-3.5 font-semibold text-slate-600">Responsible</th>
+                        <th className="w-36 px-4 py-3.5 font-semibold text-slate-600">Status</th>
+                        <th className="w-32 px-4 py-3.5 text-center font-semibold text-slate-600">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-sm">
+                      {filteredRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                            {rows.length === 0
+                              ? `No ${isOFI ? 'OFI' : 'NCAR'} findings have been added or linked to this report yet.`
+                              : `No findings matching "${logSearch}".`}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredRows.map(finding => {
+                          const isExpanded = expandedRows[finding.id] ?? false;
+                          const statusInfo = getFindingStatusInfo(finding);
+                          const StatusIcon = statusInfo.icon;
+                          const responsibleName = isOFI
+                            ? (finding.managerResponsible || finding.auditee || 'Unassigned')
+                            : (finding.managerResponsible || finding.auditee || 'Unassigned');
+                          const initial = responsibleName.trim().charAt(0).toUpperCase() || '?';
+                          const plan = !isOFI ? actionPlans.find(actionPlan => actionPlan.ncarId === finding.id && !actionPlan.isDraft) : undefined;
+                          const ofiResp = isOFI ? finding.ofiResponse : undefined;
+
+                          return (
+                            <React.Fragment key={finding.id}>
+                              <tr className={`transition hover:bg-slate-50/50 ${isExpanded ? 'bg-slate-50/20' : ''}`}>
+                                <td className="px-4 py-4 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRowExpanded(finding.id)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-blue-600 transition hover:bg-blue-50"
+                                    aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
+                                  >
+                                    {isExpanded ? <ChevronDown size={18} strokeWidth={2.5} /> : <ChevronRight size={18} strokeWidth={2.5} />}
+                                  </button>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-4 font-bold text-[#0a1931]">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRowExpanded(finding.id)}
+                                    className="text-left font-bold text-[#0a1931] transition hover:text-blue-600"
+                                  >
+                                    {finding.id}
+                                  </button>
+                                </td>
+                                <td className="px-4 py-4 font-normal text-slate-700">
+                                  <span className="line-clamp-2 max-w-md">
+                                    {finding.statement || '—'}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-4 font-medium text-slate-600">
+                                  {finding.departmentResponsible || finding.area || '—'}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                                      {initial}
+                                    </span>
+                                    <span className="max-w-[140px] truncate text-sm font-medium text-slate-700">
+                                      {responsibleName}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-4">
+                                  <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-semibold ${getBadgeClasses(statusInfo.color)}`}>
+                                    <StatusIcon size={13} />
+                                    {statusInfo.label}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-4 text-center">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewingFinding(finding)}
+                                      title="View finding"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-blue-600"
+                                    >
+                                      <Eye size={15} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openFindingEditor(finding)}
+                                      title="Edit finding"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-blue-600"
+                                    >
+                                      <Pencil size={14} />
+                                    </button>
+                                    <div className="relative">
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveMenuFindingId(activeMenuFindingId === finding.id ? null : finding.id)}
+                                        title="More options"
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                      >
+                                        <MoreVertical size={16} />
+                                      </button>
+                                      {activeMenuFindingId === finding.id && (
+                                        <>
+                                          <div className="fixed inset-0 z-20" onClick={() => setActiveMenuFindingId(null)} />
+                                          <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl">
+                                            <button
+                                              type="button"
+                                              onClick={() => { setViewingFinding(finding); setActiveMenuFindingId(null); }}
+                                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                            >
+                                              <Eye size={13} /> View Full Finding
+                                            </button>
+                                            {canEditFindings && (
+                                              <button
+                                                type="button"
+                                                onClick={() => { openFindingEditor(finding); setActiveMenuFindingId(null); }}
+                                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                              >
+                                                <Pencil size={13} /> Edit Finding
+                                              </button>
+                                            )}
+                                            {!isOFI && !isReadOnly && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  updateReport({
+                                                    repeatNcarIds: editing.repeatNcarIds.includes(finding.id)
+                                                      ? editing.repeatNcarIds.filter(id => id !== finding.id)
+                                                      : [...editing.repeatNcarIds, finding.id],
+                                                    resultsGeneratedAt: undefined
+                                                  });
+                                                  setActiveMenuFindingId(null);
+                                                }}
+                                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                              >
+                                                {editing.repeatNcarIds.includes(finding.id) ? 'Unmark Repeat' : 'Mark as Repeat'}
+                                              </button>
+                                            )}
+                                            {!isReadOnly && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  removeFinding(isOFI ? 'OFI' : 'NCAR', finding.id);
+                                                  setActiveMenuFindingId(null);
+                                                }}
+                                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-rose-600 hover:bg-rose-50"
+                                              >
+                                                <Trash2 size={13} /> Unlink from Report
+                                              </button>
+                                            )}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {/* Expanded Corrective Action Plan (CAP) Card */}
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={7} className="bg-white px-4 py-3 sm:px-6">
+                                    <div className="rounded-2xl border border-slate-100 bg-[#f8faff] p-5 shadow-xs sm:p-6">
+                                      <div className="mb-5 flex items-center gap-3">
+                                        <h4 className="text-base font-bold text-[#0a1931]">Part 2: Investigation and Action Plan</h4>
+                                        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${getBadgeClasses(statusInfo.color)}`}>
+                                          <StatusIcon size={12} />
+                                          {statusInfo.label}
+                                        </span>
+                                      </div>
+
+                                      {isOFI ? (
+                                        <div className="grid grid-cols-1 gap-x-10 gap-y-4 text-sm md:grid-cols-2">
+                                          <div className="space-y-4">
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Response Date</span>
+                                              <span className="text-sm font-medium text-slate-800">{ofiResp?.responseDate || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Corrective Action Plan</span>
+                                              <span className="text-sm font-medium text-slate-800">{ofiResp?.correctiveActionPlan || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Responsible Person</span>
+                                              <span className="text-sm font-medium text-slate-800">{ofiResp?.responsiblePerson || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Auditee Notes</span>
+                                              <span className="text-sm font-medium text-slate-800">{ofiResp?.notes || '—'}</span>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-4">
+                                            <div>
+                                              <span className="block text-sm font-medium text-slate-500">Applicable</span>
+                                              <span className="mt-1 block text-sm font-medium text-slate-800">{ofiResp?.applicable || '—'}</span>
+                                            </div>
+                                            {ofiResp?.targetDate && (
+                                              <div>
+                                                <span className="block text-sm font-medium text-slate-500">Target Date</span>
+                                                <span className="mt-1 block text-sm font-medium text-slate-800">{ofiResp.targetDate}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="grid grid-cols-1 gap-x-10 gap-y-4 text-sm md:grid-cols-2">
+                                          <div className="space-y-4">
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Response Date</span>
+                                              <span className="text-sm font-medium text-slate-800">{plan?.responseDate || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Corrective Action Plan</span>
+                                              <span className="text-sm font-medium text-slate-800">{plan?.correctiveAction || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Responsible Person</span>
+                                              <span className="text-sm font-medium text-slate-800">{plan?.capResponsible || plan?.responsiblePerson || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Immediate Correction</span>
+                                              <span className="text-sm font-medium text-slate-800">{plan?.immediateCorrection || '—'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-[180px_1fr] items-baseline">
+                                              <span className="text-sm font-medium text-slate-500">Root Cause Analysis</span>
+                                              <span className="text-sm font-medium text-slate-800">{plan?.rootCause || '—'}</span>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-4">
+                                            <div>
+                                              <span className="block text-sm font-medium text-slate-500">CAP Target Date</span>
+                                              <span className="mt-1 block text-sm font-medium text-slate-800">{plan?.capTargetDate || '—'}</span>
+                                            </div>
+                                            <div>
+                                              <span className="block text-sm font-medium text-slate-500">Consequence / Impact</span>
+                                              <span className="mt-1 block text-sm font-medium text-slate-800">{plan?.consequenceImpact || '—'}</span>
+                                            </div>
+                                            <div>
+                                              <span className="block text-sm font-medium text-slate-500">Correction Target Date</span>
+                                              <span className="mt-1 block text-sm font-medium text-slate-800">{plan?.correctionTargetDate || '—'}</span>
+                                            </div>
+                                            <div>
+                                              <span className="block text-sm font-medium text-slate-500">Can Occur Elsewhere?</span>
+                                              <span className="mt-1 block text-sm font-medium text-slate-800">
+                                                {plan?.canOccurElsewhere ? `Yes${plan.elsewhereDetails ? ` (${plan.elsewhereDetails})` : ''}` : (plan ? 'No' : '—')}
+                                              </span>
+                                            </div>
+                                            {finding.rejectionRemarks && (
+                                              <div>
+                                                <span className="block text-sm font-medium text-rose-600">Review Remarks</span>
+                                                <span className="mt-1 block rounded-lg border border-rose-100 bg-rose-50 p-2 text-sm font-medium text-rose-800">{finding.rejectionRemarks}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })
                       )}
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-800">{finding.statement || 'No finding statement provided.'}</p>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                      <span>{finding.systemType || 'Management system not specified'}</span>
-                      <span>Clause: {finding.clauseNumber || finding.standardClause || '—'}</span>
-                      <span>Department: {finding.departmentResponsible || finding.area || '—'}</span>
-                      <span>Responsible: {finding.managerResponsible || finding.auditee || '—'}</span>
-                      {!isOFI && <span>NCAR Response Due: {finding.deadline || '5 working days after assignment'}</span>}
-                    </div>
-                    {finding.rejectionRemarks && (
-                      <p className="mt-2 text-xs text-rose-700 bg-rose-50 p-2 rounded border border-rose-100 font-medium">
-                        Review remarks: {finding.rejectionRemarks}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    {canEditFindings && <button type="button" onClick={() => openFindingEditor(finding)} aria-label={`Edit ${finding.id}`} title="Edit finding" className="rounded-lg p-2 text-[#172554] hover:bg-blue-50"><Pencil size={15} /></button>}
-                    {!isReadOnly && <button type="button" onClick={() => removeFinding(isOFI ? 'OFI' : 'NCAR', finding.id)} aria-label={`Unlink ${finding.id}`} title="Unlink finding from report" className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"><X size={15} /></button>}
-                  </div>
-                </li>
-              );
-            })}</ul>}</div>
-            {rows.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold text-gray-800">Part 2 Responses</h3>{rows.map(finding => {
-              const plan = !isOFI ? actionPlans.find(actionPlan => actionPlan.ncarId === finding.id && !actionPlan.isDraft) : undefined;
-              const response = isOFI ? finding.ofiResponse : undefined;
-              return <details key={`response-${finding.id}`} className="rounded-xl border border-gray-200 bg-white p-4"><summary className="cursor-pointer text-sm font-medium text-gray-800">{finding.id} <span className="ml-2 text-xs font-normal text-gray-500">{isOFI ? response?.status || 'Awaiting response' : plan ? `Submitted ${plan.responseDate || ''}` : 'Awaiting Part 2'}</span></summary>
-                {isOFI ? <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2"><p><span className="block text-xs text-gray-500">Response Date</span>{response?.responseDate || '—'}</p><p><span className="block text-xs text-gray-500">Applicable</span>{response?.applicable || '—'}</p><p className="sm:col-span-2"><span className="block text-xs text-gray-500">Corrective Action Plan</span>{response?.correctiveActionPlan || '—'}</p><p><span className="block text-xs text-gray-500">Responsible Person</span>{response?.responsiblePerson || '—'}</p><p><span className="block text-xs text-gray-500">Target Date</span>{response?.targetDate || '—'}</p><p className="sm:col-span-2"><span className="block text-xs text-gray-500">Auditee Notes</span>{response?.notes || '—'}</p></div>
-                  : <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2"><p><span className="block text-xs text-gray-500">Response Date</span>{plan?.responseDate || '—'}</p><p><span className="block text-xs text-gray-500">Consequence / Impact</span>{plan?.consequenceImpact || '—'}</p><p><span className="block text-xs text-gray-500">Immediate Correction</span>{plan?.immediateCorrection || '—'}</p><p><span className="block text-xs text-gray-500">Correction Responsible</span>{plan?.correctionResponsible || plan?.responsiblePerson || '—'}</p><p><span className="block text-xs text-gray-500">Correction Target Date</span>{plan?.correctionTargetDate || '—'}</p><p><span className="block text-xs text-gray-500">Root Cause Analysis</span>{plan?.rootCause || '—'}</p><p><span className="block text-xs text-gray-500">Can Occur Elsewhere?</span>{plan?.canOccurElsewhere || '—'} {plan?.elsewhereDetails}</p><p><span className="block text-xs text-gray-500">CAP Responsible Person</span>{plan?.capResponsible || plan?.responsiblePerson || '—'}</p><p className="sm:col-span-2"><span className="block text-xs text-gray-500">Corrective Action Plan</span>{plan?.correctiveAction || '—'}</p><p><span className="block text-xs text-gray-500">CAP Target Date</span>{plan?.capTargetDate || '—'}</p></div>}
-              </details>;
-            })}</div>}
-            {!isOFI && rows.length > 0 && !isReadOnly && <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"><p className="mb-2 text-xs font-semibold text-indigo-900">Repeat audit findings</p><div className="flex flex-wrap gap-3">{rows.map(finding => <label key={finding.id} className="flex items-center gap-2 text-xs text-indigo-900"><input type="checkbox" checked={editing.repeatNcarIds.includes(finding.id)} onChange={event => updateReport({ repeatNcarIds: event.target.checked ? [...editing.repeatNcarIds, finding.id] : editing.repeatNcarIds.filter(id => id !== finding.id), resultsGeneratedAt: undefined })} />{finding.id}</label>)}</div><p className="mt-2 text-[11px] text-indigo-700">Mark only findings confirmed as recurring from a prior audit. This affects the maturity level.</p></div>}
-            {!isReadOnly && <div className="flex justify-end border-t border-gray-100 pt-4"><button type="button" onClick={() => continueTo(isOFI ? 'ISO Clauses' : 'OFI Log')} className="rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">Next</button></div>}
-          </section>;
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex justify-end border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => continueTo(isOFI ? 'ISO Clauses' : 'OFI Log')}
+                    className="rounded-xl bg-[#0047e1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#003bbd]"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </section>
+          );
         })()}
 
         {activeTab === 'Results' && <section className="space-y-4"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><h2 className="text-lg font-bold text-gray-800">Nonconformity Summary per Department</h2><p className="mt-1 text-sm text-gray-500">Generate the summary when linked audit findings are ready.</p></div>{!isReadOnly && <button type="button" onClick={generateResults} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-[#172554] hover:bg-blue-100">Generate Results</button>}</div><div className="overflow-x-auto rounded-xl border border-gray-100"><table className="w-full min-w-[740px] text-left text-sm"><thead><tr className="bg-blue-50 text-xs uppercase tracking-wide text-blue-900"><th className="px-4 py-3">Department / Business Unit</th><th className="px-4 py-3">Audit Maturity Level</th><th className="px-4 py-3">Major NC</th><th className="px-4 py-3">Minor NC</th><th className="px-4 py-3">Opportunities for Improvement</th><th className="px-4 py-3">Related Findings</th></tr></thead><tbody className="divide-y divide-gray-100">{!editing.resultsGeneratedAt ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">Results have not been generated.</td></tr> : departmentResults.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">No department data is available for the selected findings.</td></tr> : departmentResults.map(result => <tr key={result.department}><td className="px-4 py-3 font-medium text-gray-800">{result.department}</td><td className="px-4 py-3">{result.level}</td><td className="px-4 py-3">{result.major}</td><td className="px-4 py-3">{result.minor}</td><td className="px-4 py-3">{result.ofi}</td><td className="px-4 py-3 text-xs text-gray-600">{result.ids.join(', ')}</td></tr>)}</tbody></table></div><p className="text-xs text-gray-500">Precedence: Level 3 for a marked repeat finding; otherwise Level 2 when a major NC exists; otherwise Level 1 when a minor NC or OFI exists. Departments without findings receive no maturity level.</p></section>}
@@ -992,7 +1323,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
           <div className="border-b border-[#f3ead9] px-5 py-4">
             <h2 id="submit-ncar-title" className="text-lg font-semibold text-[#172554]">Submit NCAR?</h2>
             <p className="mt-2 text-sm leading-6 text-gray-600">Submit Part 1 and assign the linked findings to their Auditees?</p>
-            <p className="mt-2 text-xs leading-5 text-gray-500">This starts the 5 working day response period for the Auditees to complete Part 2.</p>
+            <p className="mt-2 text-xs leading-5 text-gray-500">This starts the 5 working day response period for the Auditees to submit their Corrective Action Plan (CAP).</p>
           </div>
           <div className="flex justify-end gap-2 px-5 py-4">
             <button type="button" onClick={() => setShowSubmitConfirmation(false)} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
@@ -1000,6 +1331,63 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
           </div>
         </div>
       </div>}
+      {viewingFinding && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setViewingFinding(null)}>
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                  {viewingFinding.findingType === 'OFI' ? 'OFI Finding' : `${viewingFinding.findingType} NCAR`}
+                </span>
+                <h3 className="text-xl font-bold text-[#0a1931]">{viewingFinding.id}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingFinding(null)}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 hover:text-slate-800"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-5 space-y-4 text-sm">
+              <div>
+                <h5 className="text-xs font-semibold uppercase text-slate-400">Statement</h5>
+                <p className="mt-1 whitespace-pre-wrap font-medium text-slate-800">{viewingFinding.statement || '—'}</p>
+              </div>
+              {viewingFinding.evidence && (
+                <div>
+                  <h5 className="text-xs font-semibold uppercase text-slate-400">Objective Evidence</h5>
+                  <p className="mt-1 whitespace-pre-wrap text-slate-700">{viewingFinding.evidence}</p>
+                </div>
+              )}
+              {viewingFinding.requirement && (
+                <div>
+                  <h5 className="text-xs font-semibold uppercase text-slate-400">Requirement</h5>
+                  <p className="mt-1 text-slate-700">{viewingFinding.requirement}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4 text-xs">
+                <div><span className="text-slate-500">Department:</span> <span className="font-semibold text-slate-700">{viewingFinding.departmentResponsible || viewingFinding.area || '—'}</span></div>
+                <div><span className="text-slate-500">Responsible Person:</span> <span className="font-semibold text-slate-700">{viewingFinding.managerResponsible || viewingFinding.auditee || '—'}</span></div>
+                <div><span className="text-slate-500">ISO Clause:</span> <span className="font-semibold text-slate-700">{viewingFinding.clauseNumber || viewingFinding.standardClause || '—'}</span></div>
+                <div><span className="text-slate-500">System Type:</span> <span className="font-semibold text-slate-700">{viewingFinding.systemType || '—'}</span></div>
+                <div><span className="text-slate-500">Issue Date:</span> <span className="font-semibold text-slate-700">{viewingFinding.issueDate || '—'}</span></div>
+                <div><span className="text-slate-500">Issuing Auditor:</span> <span className="font-semibold text-slate-700">{viewingFinding.issuingAuditor || viewingFinding.auditor || '—'}</span></div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setViewingFinding(null)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {renderFindingPicker()}
     </div>
   );

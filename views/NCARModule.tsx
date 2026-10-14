@@ -342,7 +342,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     const trailEntry = createTrailEntry(
       isSubmitting ? 'PART1_SUBMITTED' : 'DRAFT_SAVED',
       isSubmitting ? 'Part 1 Submitted & Assigned' : 'Draft Saved',
-      isSubmitting ? `Auditor completed and submitted Part 1. 5-working-day Part 2 SLA initiated for ${formData.managerResponsible || 'auditee'}.` : 'NCAR draft saved by auditor.',
+      isSubmitting ? `Auditor completed and submitted Part 1. 5-working-day Corrective Action Plan (CAP) SLA initiated for ${formData.managerResponsible || 'auditee'}.` : 'NCAR draft saved by auditor.',
       viewingNCAR?.status || NCARStatus.DRAFT,
       newStatus
     );
@@ -408,7 +408,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
 
     onNotify(
       isSubmitting 
-        ? `NCAR ${ncarNumber} Part 1 submitted. The 5-working-day Part 2 SLA response period has started.` 
+        ? `NCAR ${ncarNumber} Part 1 submitted. The 5-working-day Corrective Action Plan (CAP) response period has started.` 
         : `NCAR ${ncarNumber} draft saved successfully.`,
       'success'
     );
@@ -483,8 +483,8 @@ const NCARModule: React.FC<NCARModuleProps> = ({
     if (!isDraft) {
       const trailEntry = createTrailEntry(
         'PART2_SUBMITTED',
-        'Part 2 Submitted (IC, RCA & Proposed CAP)',
-        'Auditee submitted complete Part 2 response including Immediate Correction, Root Cause Analysis, and proposed Corrective Action Plan for Lead Auditor review.',
+        'Corrective Action Plan Submitted (IC, RCA & CAP)',
+        'Auditee submitted complete Corrective Action Plan (CAP) including Immediate Correction, Root Cause Analysis, and proposed Action Plan for Lead Auditor review.',
         viewingNCAR.status,
         NCARStatus.ACTION_PLAN_SUBMITTED
       );
@@ -498,9 +498,9 @@ const NCARModule: React.FC<NCARModuleProps> = ({
         rejectionRemarks: undefined
       } : n));
 
-      onNotify(`Part 2 response for NCAR ${viewingNCAR.id} submitted successfully. Now pending Lead Auditor review.`, 'success');
+      onNotify(`Corrective Action Plan (CAP) for NCAR ${viewingNCAR.id} submitted successfully. Now pending Lead Auditor review.`, 'success');
     } else {
-      onNotify(`Part 2 draft for NCAR ${viewingNCAR.id} saved as a draft.`, 'success');
+      onNotify(`Corrective Action Plan (CAP) draft for NCAR ${viewingNCAR.id} saved as a draft.`, 'success');
     }
 
     closeForm();
@@ -569,7 +569,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       const trailEntry = createTrailEntry(
         'LEAD_APPROVED',
         'Approved by Lead Auditor',
-        approvalComments.trim() || 'Lead Auditor reviewed and approved the complete NCAR response (Part 1 and Part 2). Forwarded to Head Manager.',
+        approvalComments.trim() || 'Lead Auditor reviewed and approved the complete NCAR response (Part 1 and Corrective Action Plan). Forwarded to Head Manager.',
         viewingNCAR.status,
         NCARStatus.CAP_LEAD_APPROVED
       );
@@ -631,7 +631,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       if (!matchesStatus) {
         if (statusFilter === 'Draft') {
           matchesStatus = ncar.status === NCARStatus.DRAFT;
-        } else if (statusFilter === 'Awaiting Auditee (Part 2)') {
+        } else if (statusFilter === 'Awaiting Auditee (CAP)' || statusFilter === 'Awaiting Auditee (Part 2)') {
           matchesStatus = ncar.status === NCARStatus.PART1_SUBMITTED || isPendingPart2(ncar);
         } else if (statusFilter === 'Pending Review') {
           matchesStatus = ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED || ncar.status === NCARStatus.CAP_LEAD_APPROVED || ncar.status === NCARStatus.FOR_APPROVAL;
@@ -663,12 +663,12 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       filter: 'All Status' 
     },
     { 
-      label: 'Awaiting Auditee (Part 2)', 
+      label: 'Awaiting Action Plan (CAP)', 
       count: ncarFindings.filter(ncar => ncar.status === NCARStatus.PART1_SUBMITTED || isPendingPart2(ncar)).length, 
       caption: 'Active 5-working-day SLA', 
       icon: Clock3, 
       color: 'amber', 
-      filter: 'Awaiting Auditee (Part 2)' 
+      filter: 'Awaiting Auditee (CAP)' 
     },
     { 
       label: 'Pending Review', 
@@ -830,7 +830,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
           >
             <option value="All Status">All Statuses</option>
             <option value="Draft">Draft</option>
-            <option value="Awaiting Auditee (Part 2)">Awaiting Auditee (Part 2)</option>
+            <option value="Awaiting Auditee (CAP)">Awaiting Action Plan (CAP)</option>
             <option value="Pending Review">Pending Review (All)</option>
             <option value="Pending Lead Review">Pending Lead Review</option>
             <option value="Pending Head Approval">Pending Head Approval</option>
@@ -851,7 +851,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                 <th className="px-4 py-3.5">Type</th>
                 <th className="px-4 py-3.5">System</th>
                 <th className="px-4 py-3.5">Auditee</th>
-                <th className="px-4 py-3.5 text-center">Part 2 Response</th>
+                <th className="px-4 py-3.5 text-center">Corrective Action Plan (CAP)</th>
                 <th className="px-4 py-3.5 text-center">Response Deadline & SLA</th>
                 <th className="px-4 py-3.5 text-center">Approval Status</th>
                 <th className="px-4 py-3.5 text-center">Actions</th>
@@ -885,7 +885,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                     statusLabel = 'Draft';
                   } else if (ncar.status === NCARStatus.PART1_SUBMITTED) {
                     statusBadgeStyle = 'border-blue-200 bg-blue-50 text-blue-700';
-                    statusLabel = 'Awaiting Part 2';
+                    statusLabel = 'Awaiting Action Plan';
                   } else if (ncar.status === NCARStatus.ACTION_PLAN_SUBMITTED) {
                     statusBadgeStyle = 'border-amber-200 bg-amber-50 text-amber-800';
                     statusLabel = 'Pending Lead Review';
@@ -937,7 +937,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                         </div>
                       </td>
 
-                      {/* Part 2 Response Status */}
+                      {/* Corrective Action Plan (CAP) Status */}
                       <td className="px-4 py-3.5 text-center">
                         {hasSubmitted ? (
                           <div className="inline-flex flex-col items-center">
@@ -950,7 +950,7 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                           </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-normal text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap">
-                            <Clock3 size={12} /> Awaiting Part 2
+                            <Clock3 size={12} /> Awaiting Action Plan
                           </span>
                         )}
                       </td>
@@ -1618,14 +1618,14 @@ const NCARModule: React.FC<NCARModuleProps> = ({
                       onClick={() => saveActionPlanPart2(true)} 
                       className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-normal text-gray-700 hover:bg-gray-50"
                     >
-                      Save Part 2 Draft
+                      Save CAP Draft
                     </button>
                     <button 
                       type="button" 
                       onClick={() => saveActionPlanPart2(false)} 
                       className="inline-flex items-center gap-1.5 rounded-xl bg-[#172554] px-5 py-2 text-xs font-normal text-white hover:bg-[#1E3268] shadow-sm"
                     >
-                      <Send size={14} /> Submit Part 2 (IC, RCA & CAP)
+                      <Send size={14} /> Submit Corrective Action Plan (CAP)
                     </button>
                   </>
                 )}

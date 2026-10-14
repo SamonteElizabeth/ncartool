@@ -119,7 +119,7 @@ export const INITIAL_NCARS: NCAR[] = [
       {
         id: 'trail-002-2',
         action: 'PART2_SUBMITTED',
-        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        actionLabel: 'Action Plan Submitted (CAP)',
         performedBy: 'Bob Johnson',
         role: 'AUDITEE',
         timestamp: '2023-10-04T09:00:00Z',
@@ -162,7 +162,7 @@ export const INITIAL_NCARS: NCAR[] = [
       {
         id: 'trail-003-2',
         action: 'PART2_SUBMITTED',
-        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        actionLabel: 'Action Plan Submitted (CAP)',
         performedBy: 'Alice Smith',
         role: 'AUDITEE',
         timestamp: '2023-11-14T15:00:00Z',
@@ -243,13 +243,13 @@ export const INITIAL_NCARS: NCAR[] = [
       {
         id: 'trail-004-2',
         action: 'PART2_SUBMITTED',
-        actionLabel: 'Part 2 Submitted (IC, RCA & CAP)',
+        actionLabel: 'Action Plan Submitted (CAP)',
         performedBy: 'Bob Johnson',
         role: 'AUDITEE',
         timestamp: '2023-12-10T11:00:00Z',
         previousStatus: NCARStatus.PART1_SUBMITTED,
         newStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
-        comments: 'Part 2 submitted.'
+        comments: 'Corrective Action Plan (CAP) submitted.'
       },
       {
         id: 'trail-004-3',
