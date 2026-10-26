@@ -134,8 +134,24 @@ export interface NCARAuditTrailEntry {
 
 export type OFIResponseStatus = 'Pending' | 'Accepted' | 'Rejected' | 'In Progress' | 'Implemented';
 
+// Approval of an implemented OFI: Lead Auditor first, then Head Manager. Rejected/not-applicable OFIs never enter it.
+export type OFIImplementationReviewStage = 'PENDING_LEAD' | 'PENDING_HEAD' | 'VERIFIED' | 'RETURNED';
+
+export interface OFIImplementationReview {
+  stage: OFIImplementationReviewStage;
+  submittedAt: string;
+  leadApprovedBy?: string;
+  leadApprovedAt?: string;
+  headApprovedBy?: string;
+  headApprovedAt?: string;
+  returnedBy?: string;
+  returnedAt?: string;
+  remarks?: string;
+}
+
 export interface OFIResponse {
   status: OFIResponseStatus;
+  implementationReview?: OFIImplementationReview;
   responseDate: string;
   applicable?: 'Yes' | 'No';
   correctiveActionPlan?: string;
@@ -182,6 +198,14 @@ export interface AuditReportClause {
   ofiIds: string[];
 }
 
+// Simulated email of the full report to Executives, recorded on Head Manager final approval.
+export interface ExecutiveEmailRecord {
+  recipients: string[];
+  sentAt: string;
+  sentBy: string;
+  attachmentName: string;
+}
+
 export interface AuditReport {
   id: string;
   reportTitle: string;
@@ -204,6 +228,7 @@ export interface AuditReport {
   approvedAt?: string;
   leadApprovedBy?: string;
   leadApprovedAt?: string;
+  executiveEmail?: ExecutiveEmailRecord;
   createdAt: string;
   updatedAt: string;
 };

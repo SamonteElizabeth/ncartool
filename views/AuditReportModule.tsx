@@ -1,10 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   AlertCircle, ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, Clock3, Download, FileText,
-  Eye, MoreVertical, Pencil, Plus, Search, Trash2, X
+  Eye, Mail, MoreVertical, Pencil, Plus, Search, Trash2, X
 } from 'lucide-react';
 import { ActionPlan, AuditPlan, AuditReport, AuditReportClause, AuditReportStatus, NCAR, NCARStatus, Role, User } from '../types';
 import { getConfiguredPhilippineHolidays, hasSubmittedNCARResponse, makeResponseSla } from '../utils/ncarSla';
+import { finalApproveReport, fullReportFileName, headApprovalTrailEntry, isHeadManagerApproved } from '../utils/auditReportApproval';
+import ExecutiveSendPrompt from './ExecutiveSendPrompt';
 
 interface AuditReportModuleProps {
   reports: AuditReport[];
@@ -16,6 +18,7 @@ interface AuditReportModuleProps {
   actionPlans: ActionPlan[];
   role: Role;
   currentUserName: string;
+  executiveRecipients: string[];
   onNotify: (message: string, type?: 'info' | 'success' | 'warning') => void;
 }
 
@@ -120,7 +123,7 @@ const blankReportOfi = (issuingAuditor: string): ReportOfiDraft => ({
   businessUnit: '', auditeeName: '', issuingAuditor, deadline: ''
 });
 
-const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setReports, setNcars, auditPlans, ncars, users, actionPlans, role, currentUserName, onNotify }) => {
+const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setReports, setNcars, auditPlans, ncars, users, actionPlans, role, currentUserName, executiveRecipients, onNotify }) => {
   const [editing, setEditing] = useState<AuditReport | null>(null);
   const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('All Status');
   const [activeTab, setActiveTab] = useState<Tab>('Details');
@@ -140,6 +143,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     'NCAR2026-AR-001': true
   });
   const [viewingFinding, setViewingFinding] = useState<NCAR | null>(null);
+  const [showAutoSendPrompt, setShowAutoSendPrompt] = useState(false);
   const [activeMenuFindingId, setActiveMenuFindingId] = useState<string | null>(null);
   const baselineRef = useRef('');
 
@@ -151,6 +155,8 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
   };
 
   const getFindingStatusInfo = (finding: NCAR) => {
+    if (finding.status === NCARStatus.CAP_LEAD_APPROVED) return { label: 'For HM Approval', color: 'amber', icon: Clock };
+    if (finding.status === NCARStatus.APPROVED && isHeadManagerApproved(finding)) return { label: 'HM Approved', color: 'blue', icon: CheckCircle2 };
     if (finding.findingType === 'OFI') {
       const ofiStatus = finding.ofiResponse?.status;
       if (finding.status === NCARStatus.CLOSED || ofiStatus === 'Implemented') {
@@ -167,7 +173,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       if (finding.status === NCARStatus.CLOSED || finding.status === NCARStatus.APPROVED) {
         return { label: 'Closed', color: 'blue', icon: CheckCircle2 };
       }
-      if (finding.status === NCARStatus.ACTION_PLAN_SUBMITTED || finding.status === NCARStatus.CAP_LEAD_APPROVED) {
+      if (finding.status === NCARStatus.ACTION_PLAN_SUBMITTED) {
         return { label: 'In Progress', color: 'green', icon: Check };
       }
       if (finding.status === NCARStatus.REJECTED || finding.status === NCARStatus.REOPENED) {
@@ -200,8 +206,10 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
   const isEditor = editing !== null;
   const isReadOnly = editing?.status !== 'Draft';
   const isAuthorized = role === 'AUDITOR' || role === 'LEAD_AUDITOR';
-  const canEditFindings = role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER';
-  const canEditSavedReport = role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER';
+  // A final-approved report (already emailed to Executives) is locked for everyone.
+  const isApprovedReport = editing?.status === 'Approved';
+  const canEditFindings = (role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER') && !isApprovedReport;
+  const canEditSavedReport = (role === 'LEAD_AUDITOR' || role === 'HEAD_MANAGER') && !isApprovedReport;
   const isLeadReportReview = role === 'LEAD_AUDITOR' && editing?.status === 'Pending Lead Review';
   const isFinalReportReview = role === 'HEAD_MANAGER' && editing?.status === 'Pending Final Approval';
   const canApproveReport = Boolean(isLeadReportReview || isFinalReportReview);
@@ -341,10 +349,11 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     setActiveTab(tab);
   };
 
-  const approveReport = () => {
+  // skipConfirm: the Head Manager already answered "Yes" in the auto-send prompt after approving the last finding.
+  const approveReport = (skipConfirm = false) => {
     if (!editing || !canApproveReport || !currentUserName) return;
     const isLeadApproval = isLeadReportReview;
-    if (!window.confirm(isLeadApproval ? 'Approve this complete NCAR/OFI report package and forward it to the Head Manager?' : 'Give final approval to this complete NCAR/OFI report package?')) return;
+    if (!skipConfirm && !window.confirm(isLeadApproval ? 'Approve this complete NCAR/OFI report package and forward it to the Head Manager?' : `Give final approval to this complete NCAR/OFI report package?\n\nOnce approved, the full Audit Report will be sent directly to the Executive email${executiveRecipients.length ? `: ${executiveRecipients.join(', ')}` : ' (no recipients are set yet)'}.`)) return;
     const findingIds = [...new Set([...editing.ncarIds, ...editing.ofiIds])];
     const findingsToAssign = ncars.filter(ncar => findingIds.includes(ncar.id));
     const incomplete = findingsToAssign.filter(ncar => !hasSubmittedNCARResponse(ncar));
@@ -352,16 +361,22 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       onNotify(`Cannot approve yet. These Corrective Action Plans (CAP) are still incomplete: ${incomplete.map(ncar => ncar.id).join(', ')}.`, 'warning');
       return;
     }
+    if (!isLeadApproval && findingsAwaitingHeadApproval.length > 0) {
+      onNotify(`Approve every NCAR and OFI first. Still waiting for Head Manager approval: ${findingsAwaitingHeadApproval.map(ncar => ncar.id).join(', ')}.`, 'warning');
+      return;
+    }
 
     const approvedAt = new Date().toISOString();
-    const approvedReport = isLeadApproval
+    const approvedReport: AuditReport = isLeadApproval
       ? { ...editing, status: 'Pending Final Approval' as const, leadApprovedBy: currentUserName, leadApprovedAt: approvedAt, updatedAt: approvedAt }
-      : { ...editing, status: 'Approved' as const, approvedBy: currentUserName, approvedAt, updatedAt: approvedAt };
+      : finalApproveReport(editing, currentUserName, executiveRecipients);
     setReports(current => current.map(report => report.id === editing.id ? approvedReport : report));
     setNcars(current => current.map(ncar => findingIds.includes(ncar.id) ? { ...ncar, status: isLeadApproval ? NCARStatus.CAP_LEAD_APPROVED : NCARStatus.CLOSED } : ncar));
     setEditing(approvedReport);
     baselineRef.current = JSON.stringify(approvedReport);
     onNotify(isLeadApproval ? 'Lead Auditor approved the completed NCAR/OFI package. It is now pending Head Manager final approval.' : 'Head Manager gave final approval to the NCAR/OFI package.', 'success');
+    if (approvedReport.executiveEmail) onNotify(`Full Audit Report emailed to Executives: ${approvedReport.executiveEmail.recipients.join(', ')}.`, 'success');
+    else if (!isLeadApproval) onNotify('No Executive recipients are set in Maintenance Table, so the Audit Report was not emailed.', 'warning');
   };
 
   const reportNcars = useMemo(() => {
@@ -380,8 +395,19 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
     });
     return [...uniqueFindings.values()];
   }, [ncars, editing?.ofiIds]);
-  const exportFullReport = () => {
-    if (!editing) return;
+  const reportFindings = [...reportNcars, ...reportOfis];
+  const findingsAwaitingHeadApproval = reportFindings.filter(finding => !isHeadManagerApproved(finding));
+  const approveFinding = (finding: NCAR) => {
+    if (!editing || !isFinalReportReview || finding.status !== NCARStatus.CAP_LEAD_APPROVED) return;
+    const label = finding.findingType === 'OFI' ? 'OFI' : 'NCAR';
+    if (!window.confirm(`Approve ${label} ${finding.id}?`)) return;
+    const trailEntry = headApprovalTrailEntry(finding.id, currentUserName, role, `Approved by Head Manager in Audit Report ${editing.referenceNumber || editing.id}.`);
+    setNcars(current => current.map(ncar => ncar.id === finding.id ? { ...ncar, status: NCARStatus.APPROVED, rejectionRemarks: undefined, auditTrail: [trailEntry, ...(ncar.auditTrail || [])] } : ncar));
+    const remaining = findingsAwaitingHeadApproval.filter(pending => pending.id !== finding.id).length;
+    onNotify(remaining ? `${label} ${finding.id} approved. ${remaining} finding(s) still need your approval.` : `${label} ${finding.id} approved. All findings in this report are now approved.`, 'success');
+    if (!remaining) setShowAutoSendPrompt(true);
+  };
+  const buildFullReportCsv = (editing: AuditReport) => {
     const linkedPlan = auditPlans.find(plan => plan.id === editing.linkedAuditPlanId);
     const rows: unknown[][] = [
       ['INTERNAL AUDIT REPORT'],
@@ -391,6 +417,7 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       ['Audit Plan Start Date', linkedPlan?.startDate], ['Audit Plan End Date', linkedPlan?.endDate], ['Auditors', linkedPlan?.auditors.join(', ')], ['Auditees', linkedPlan?.auditees.join(', ')],
       ['Prepared By', editing.preparedBy], ['Release Date', editing.releaseDate],
       ['Confidentiality', editing.confidentiality], ['Status', editing.status], ['Approved By', editing.approvedBy], ['Approved At', editing.approvedAt],
+      ['Sent to Executive', editing.executiveEmail ? `Yes (${editing.executiveEmail.recipients.join(', ')} on ${editing.executiveEmail.sentAt})` : 'No'],
       [], ['Objectives and Conclusion'], ['Audit Objectives', editing.objectives], ['Audit Conclusion', editing.conclusion], [],
       ['NCAR Log'],
       ['NCAR ID', 'Nonconformity (What went wrong?)', 'Evidence', 'ISO/Business Requirement', 'Finding Type', 'Management System Type', 'Clause', 'Issue Date', 'Process Involved', 'Manager Responsible', 'Department Responsible', 'Issuing Auditor', 'NCAR Response Date', 'CAP Response Date', 'Consequence / Impact', 'Immediate Correction', 'Correction Responsible', 'Correction Target Date', 'Root Cause Analysis', 'Can Occur Elsewhere?', 'Elsewhere Details', 'Corrective Action Plan', 'CAP Responsible', 'CAP Target Date'],
@@ -407,11 +434,14 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
       ...(editing.clauses.length ? editing.clauses.map(entry => [entry.clause, entry.highlights, entry.lowlights, entry.ncarIds.join(', '), entry.ofiIds.join(', ')]) : [['No clause entries']])
     ];
     const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-    const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    return '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+  };
+  const exportFullReport = () => {
+    if (!editing) return;
+    const url = URL.createObjectURL(new Blob([buildFullReportCsv(editing)], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${editing.referenceNumber || editing.id || 'audit-report'}-Full-Audit-Report.csv`;
+    link.download = fullReportFileName(editing);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -863,9 +893,9 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
         })}
       </div>
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left">
-          <thead><tr className="border-b border-blue-100 bg-blue-50 text-xs uppercase tracking-wide text-blue-900"><th className="px-5 py-4">Report Title</th><th className="px-5 py-4">Reference Number</th><th className="px-5 py-4">Linked Audit Plan</th><th className="px-5 py-4">Prepared By</th><th className="px-5 py-4">Status</th><th className="px-5 py-4 text-right">Action</th></tr></thead>
-          <tbody className="divide-y divide-gray-100 text-sm">{visibleReports.length === 0 ? <tr><td colSpan={6} className="px-6 py-14 text-center"><FileText className="mx-auto mb-3 text-gray-300" size={34} /><p className="font-semibold text-gray-600">{reports.length ? `No ${statusFilter.toLowerCase()} reports` : 'No audit reports yet'}</p><p className="mt-1 text-xs text-gray-400">{reports.length ? 'Choose another status card to view reports.' : 'Create a report to begin documenting an audit result.'}</p></td></tr> : visibleReports.map(report => <tr key={report.id} className="hover:bg-blue-50/30"><td className="px-5 py-4 font-semibold text-gray-800">{report.reportTitle || 'Untitled report'}</td><td className="px-5 py-4 text-gray-600">{report.referenceNumber || '—'}</td><td className="px-5 py-4 text-gray-600">{auditPlans.find(plan => plan.id === report.linkedAuditPlanId)?.id || '—'}</td><td className="px-5 py-4 text-gray-600">{report.preparedBy || '—'}</td><td className="px-5 py-4"><span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${report.status === 'Draft' ? 'border-amber-200 bg-amber-50 text-amber-700' : report.status === 'Pending Approval' ? 'border-orange-200 bg-orange-50 text-orange-700' : report.status === 'Rejected' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{report.status}</span></td><td className="px-5 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openSaved(report)} title={canEditFindings ? 'View report' : report.status === 'Draft' ? 'Edit report' : 'View report'} aria-label={`${canEditFindings ? 'View' : report.status === 'Draft' ? 'Edit' : 'Open'} ${report.reportTitle || 'audit report'}`} className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-[#172554] transition hover:bg-blue-100">{canEditFindings ? <Eye size={16} /> : <Pencil size={16} />}</button><button type="button" onClick={() => deleteReport(report)} disabled={!isAuthorized || report.status !== 'Draft'} title={report.status === 'Draft' ? 'Delete draft report' : 'Only draft reports can be deleted'} aria-label={`Delete ${report.reportTitle || 'audit report'}`} className="rounded-lg border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 size={16} /></button></div></td></tr>)}</tbody>
+        <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left">
+          <thead><tr className="border-b border-blue-100 bg-blue-50 text-xs uppercase tracking-wide text-blue-900"><th className="px-5 py-4">Report Title</th><th className="px-5 py-4">Reference Number</th><th className="px-5 py-4">Linked Audit Plan</th><th className="px-5 py-4">Prepared By</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Sent to Executive</th><th className="px-5 py-4 text-right">Action</th></tr></thead>
+          <tbody className="divide-y divide-gray-100 text-sm">{visibleReports.length === 0 ? <tr><td colSpan={7} className="px-6 py-14 text-center"><FileText className="mx-auto mb-3 text-gray-300" size={34} /><p className="font-semibold text-gray-600">{reports.length ? `No ${statusFilter.toLowerCase()} reports` : 'No audit reports yet'}</p><p className="mt-1 text-xs text-gray-400">{reports.length ? 'Choose another status card to view reports.' : 'Create a report to begin documenting an audit result.'}</p></td></tr> : visibleReports.map(report => <tr key={report.id} className="hover:bg-blue-50/30"><td className="px-5 py-4 font-semibold text-gray-800">{report.reportTitle || 'Untitled report'}</td><td className="px-5 py-4 text-gray-600">{report.referenceNumber || '—'}</td><td className="px-5 py-4 text-gray-600">{auditPlans.find(plan => plan.id === report.linkedAuditPlanId)?.id || '—'}</td><td className="px-5 py-4 text-gray-600">{report.preparedBy || '—'}</td><td className="px-5 py-4"><span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${report.status === 'Draft' ? 'border-amber-200 bg-amber-50 text-amber-700' : report.status === 'Pending Approval' ? 'border-orange-200 bg-orange-50 text-orange-700' : report.status === 'Rejected' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{report.status}</span></td><td className="px-5 py-4">{report.executiveEmail ? <div title={`Sent to ${report.executiveEmail.recipients.join(', ')}`}><span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><Mail size={12} /> Yes</span><p className="mt-1 text-xs text-gray-500">{new Date(report.executiveEmail.sentAt).toLocaleString()}</p></div> : report.status === 'Approved' ? <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-500">No</span> : <span className="text-gray-400">—</span>}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openSaved(report)} title={canEditFindings ? 'View report' : report.status === 'Draft' ? 'Edit report' : 'View report'} aria-label={`${canEditFindings ? 'View' : report.status === 'Draft' ? 'Edit' : 'Open'} ${report.reportTitle || 'audit report'}`} className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-[#172554] transition hover:bg-blue-100">{canEditFindings ? <Eye size={16} /> : <Pencil size={16} />}</button><button type="button" onClick={() => deleteReport(report)} disabled={!isAuthorized || report.status !== 'Draft'} title={report.status === 'Draft' ? 'Delete draft report' : 'Only draft reports can be deleted'} aria-label={`Delete ${report.reportTitle || 'audit report'}`} className="rounded-lg border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 size={16} /></button></div></td></tr>)}</tbody>
         </table></div>
       </div>
     </div>
@@ -883,10 +913,23 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={exportFullReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"><Download size={16} /> Export Excel</button>
             <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${editing.status === 'Draft' ? 'border-amber-200 bg-amber-50 text-amber-700' : editing.status === 'Rejected' ? 'border-rose-200 bg-rose-50 text-rose-700' : editing.status === 'Approved' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-orange-200 bg-orange-50 text-orange-700'}`}><span className="h-2 w-2 rounded-full bg-current" />{editing.status}</span>
-            {canApproveReport && <button type="button" onClick={approveReport} className="rounded-xl bg-[#172554] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268]">{isLeadReportReview ? 'Approve & Forward' : 'Final Approve'}</button>}
+            {canApproveReport && <button type="button" onClick={() => approveReport()} disabled={isFinalReportReview && findingsAwaitingHeadApproval.length > 0} title={isFinalReportReview && findingsAwaitingHeadApproval.length > 0 ? `Still waiting for Head Manager approval: ${findingsAwaitingHeadApproval.map(finding => finding.id).join(', ')}` : undefined} className="rounded-xl bg-[#172554] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1E3268] disabled:cursor-not-allowed disabled:opacity-50">{isLeadReportReview ? 'Approve & Forward' : `Final Approve (${reportFindings.length - findingsAwaitingHeadApproval.length}/${reportFindings.length} approved)`}</button>}
           </div>
         </div>
+        {editing.status === 'Pending Final Approval' && <div className="mt-4 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <Mail size={16} className="mt-0.5 shrink-0" />
+          <p><span className="font-semibold">Note:</span> The Head Manager approves each NCAR and OFI in the NCAR Log and OFI Log ({reportFindings.length - findingsAwaitingHeadApproval.length} of {reportFindings.length} approved). Once all are approved and the Head Manager gives Final Approve, this Audit Report is sent directly to the Executive email{executiveRecipients.length ? <>: <span className="font-semibold">{executiveRecipients.join(', ')}</span></> : ' (no recipients are set yet in Maintenance Table)'}.</p>
+        </div>}
+        {editing.status === 'Approved' && (editing.executiveEmail ? <div className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2"><Mail size={16} className="mt-0.5 shrink-0" /><span><span className="font-semibold">Automatically sent to Executive: Yes.</span> Sent on {new Date(editing.executiveEmail.sentAt).toLocaleString()} after final approval by {editing.executiveEmail.sentBy} to <span className="font-semibold">{editing.executiveEmail.recipients.join(', ')}</span>.</span></p>
+          <button type="button" onClick={exportFullReport} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><Download size={14} /> {editing.executiveEmail.attachmentName}</button>
+        </div> : <div className="mt-4 flex items-start gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+          <Mail size={16} className="mt-0.5 shrink-0" />
+          <p><span className="font-semibold">Automatically sent to Executive: No.</span> This report was approved without an email, because either no Executive recipients were set in Maintenance Table or it was approved before email sending was added.</p>
+        </div>)}
       </header>
+
+      {showAutoSendPrompt && editing.status === 'Pending Final Approval' && <ExecutiveSendPrompt report={editing} executiveRecipients={executiveRecipients} onNo={() => setShowAutoSendPrompt(false)} onYes={() => { setShowAutoSendPrompt(false); approveReport(true); }} />}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-[#eef3fb] p-2 sm:p-2.5 shadow-sm">
         <div className="overflow-x-auto pb-0.5"><div className="relative flex min-w-[740px] items-center justify-between gap-2" role="tablist" aria-label="Audit report sections">
@@ -1101,6 +1144,17 @@ const AuditReportModule: React.FC<AuditReportModuleProps> = ({ reports, setRepor
                                     >
                                       <Eye size={15} />
                                     </button>
+                                    {isFinalReportReview && finding.status === NCARStatus.CAP_LEAD_APPROVED && (
+                                      <button
+                                        type="button"
+                                        onClick={() => approveFinding(finding)}
+                                        title={`Approve ${isOFI ? 'OFI' : 'NCAR'}`}
+                                        aria-label={`Approve ${finding.id}`}
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+                                      >
+                                        <Check size={15} />
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => openFindingEditor(finding)}

@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { NCAR, NCARStatus, Role, ActionPlan, User as UserRecord, NCARAuditTrailEntry } from '../types';
+import { AuditReport, NCAR, NCARStatus, Role, ActionPlan, User as UserRecord, NCARAuditTrailEntry } from '../types';
+import { findPendingFinalReport, isLastFindingAwaitingHeadApproval } from '../utils/auditReportApproval';
+import ExecutiveSendPrompt from './ExecutiveSendPrompt';
 import { 
   getConfiguredPhilippineHolidays, 
   getResponseSlaStatus, 
@@ -43,6 +45,9 @@ interface NCARModuleProps {
   role: Role;
   users: UserRecord[];
   issuingAuditor: string;
+  reports: AuditReport[];
+  executiveRecipients: string[];
+  onFinalApproveReport: (reportId: string) => void;
   onNotify: (msg: string, type?: 'info' | 'success' | 'warning') => void;
   setActiveModule?: (module: string) => void;
 }
@@ -59,6 +64,9 @@ const NCARModule: React.FC<NCARModuleProps> = ({
   role, 
   users,
   issuingAuditor,
+  reports,
+  executiveRecipients,
+  onFinalApproveReport,
   onNotify
 }) => {
   const [showForm, setShowForm] = useState(false);
@@ -76,6 +84,8 @@ const NCARModule: React.FC<NCARModuleProps> = ({
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approvalComments, setApprovalComments] = useState('');
   const [approvalActionType, setApprovalActionType] = useState<'LEAD_APPROVE' | 'HEAD_APPROVE'>('LEAD_APPROVE');
+  // Audit Report whose last pending finding was just approved; drives the "send to Executive?" prompt.
+  const [sendPromptReport, setSendPromptReport] = useState<AuditReport | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
@@ -601,6 +611,8 @@ const NCARModule: React.FC<NCARModuleProps> = ({
       } : n));
 
       onNotify(`NCAR ${viewingNCAR.id} received final approval from Head Manager.`, 'success');
+      const pendingReport = viewingNCAR.status === NCARStatus.CAP_LEAD_APPROVED ? findPendingFinalReport(reports, viewingNCAR.id) : undefined;
+      if (pendingReport && isLastFindingAwaitingHeadApproval(pendingReport, ncars, viewingNCAR.id)) setSendPromptReport(pendingReport);
     }
 
     setShowApproveModal(false);
@@ -1803,6 +1815,15 @@ const NCARModule: React.FC<NCARModuleProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {sendPromptReport && (
+        <ExecutiveSendPrompt
+          report={sendPromptReport}
+          executiveRecipients={executiveRecipients}
+          onNo={() => setSendPromptReport(null)}
+          onYes={() => { onFinalApproveReport(sendPromptReport.id); setSendPromptReport(null); }}
+        />
       )}
 
     </div>

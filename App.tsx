@@ -34,7 +34,7 @@ import {
   User,
   AuditReport
 } from './types';
-import { INITIAL_AUDIT_PLANS, INITIAL_AUDIT_REPORTS, INITIAL_NCARS, INITIAL_ACTION_PLANS, INITIAL_USERS } from './mockData';
+import { ALWAYS_LOADED_DEMO_NCAR_IDS, INITIAL_AUDIT_PLANS, INITIAL_AUDIT_REPORTS, INITIAL_NCARS, INITIAL_ACTION_PLANS, INITIAL_USERS } from './mockData';
 import AuditPlanning from './views/AuditPlanning';
 import NCARModule from './views/NCARModule';
 import ValidationModule from './views/ValidationModule';
@@ -46,6 +46,7 @@ import Login from './views/Login';
 import AuditReportModule from './views/AuditReportModule';
 import OFIModule from './views/OFIModule';
 import { getConfiguredPhilippineHolidays, getPhilippineDateKey, getResponseSlaStatus, hasSubmittedNCARResponse, makeResponseSla } from './utils/ncarSla';
+import { finalApproveReport, reportFindingIds } from './utils/auditReportApproval';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -59,8 +60,8 @@ const App: React.FC = () => {
       const savedNCARs = storedNCARs ? JSON.parse(storedNCARs) as NCAR[] : [];
       const savedOFIs = localStorage.getItem('ncartool-ofi-records');
       const savedOFIRecords = savedOFIs ? JSON.parse(savedOFIs) as NCAR[] : [];
-      const overdueDemoNCAR = INITIAL_NCARS.find(ncar => ncar.id === 'NCAR2026-SLA-001');
-      const recordsById = new Map<string, NCAR>([...(storedNCARs ? [...(overdueDemoNCAR ? [overdueDemoNCAR] : []), ...savedNCARs] : INITIAL_NCARS), ...savedOFIRecords].map(ncar => [ncar.id, ncar] as const));
+      const demoNCARs = INITIAL_NCARS.filter(ncar => ALWAYS_LOADED_DEMO_NCAR_IDS.includes(ncar.id));
+      const recordsById = new Map<string, NCAR>([...(storedNCARs ? [...demoNCARs, ...savedNCARs] : INITIAL_NCARS), ...savedOFIRecords].map(ncar => [ncar.id, ncar] as const));
       return [...recordsById.values()];
     } catch {
       return INITIAL_NCARS;
@@ -104,11 +105,24 @@ const App: React.FC = () => {
       return [...new Set(initialDepartments)].sort();
     }
   });
+  const [executiveRecipients, setExecutiveRecipients] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ncartool-executive-recipients');
+      const parsed = saved ? JSON.parse(saved) as unknown : ['executive@example.com'];
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
   const handledSlaNotifications = useRef(new Set<string>());
 
   useEffect(() => {
     localStorage.setItem('ncar-notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('ncartool-executive-recipients', JSON.stringify(executiveRecipients));
+  }, [executiveRecipients]);
 
   useEffect(() => {
     localStorage.setItem('ncartool-audit-reports', JSON.stringify(auditReports));
@@ -154,7 +168,23 @@ const App: React.FC = () => {
         timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
         ...(headManager ? { recipientName: headManager } : {}),
         relatedRecordId: ncar.id
-      }))
+      })),
+      // Keyed by submittedAt so a resubmission after a return notifies again.
+      ...ncars.filter(ncar => ncar.findingType === 'OFI' && ['PENDING_LEAD', 'PENDING_HEAD'].includes(ncar.ofiResponse?.implementationReview?.stage || '')).map(ofi => {
+        const review = ofi.ofiResponse!.implementationReview!;
+        const forLead = review.stage === 'PENDING_LEAD';
+        const recipient = forLead ? leadAuditor : headManager;
+        return {
+          id: `ofi-implementation-${review.stage}-${ofi.id}-${review.submittedAt}`,
+          message: forLead
+            ? `OFI ${ofi.id} was marked Implemented by ${ofi.managerResponsible || ofi.auditee} and is awaiting your approval in the OFI screen.`
+            : `OFI ${ofi.id} implementation was approved by the Lead Auditor and is awaiting your verification in the OFI screen.`,
+          type: 'info' as const,
+          timestamp: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+          ...(recipient ? { recipientName: recipient } : {}),
+          relatedRecordId: ofi.id
+        };
+      })
     ];
     if (reviewNotifications.length) setNotifications(current => [
       ...reviewNotifications.filter(notification => !current.some(item => item.id === notification.id)),
@@ -224,6 +254,19 @@ const App: React.FC = () => {
       timestamp: 'Just now'
     };
     setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  // Used by the NCAR and OFI screens when the Head Manager answers "Yes" after approving a report's last finding.
+  const finalApproveReportAndSend = (reportId: string) => {
+    const report = auditReports.find(item => item.id === reportId);
+    if (!report || report.status !== 'Pending Final Approval' || currentRole !== 'HEAD_MANAGER') return;
+    const approvedReport = finalApproveReport(report, currentUser?.name || 'Head Manager', executiveRecipients);
+    const findingIds = reportFindingIds(report);
+    setAuditReports(current => current.map(item => item.id === reportId ? approvedReport : item));
+    setNcars(current => current.map(ncar => findingIds.includes(ncar.id) ? { ...ncar, status: NCARStatus.CLOSED } : ncar));
+    notify(`Head Manager gave final approval to ${report.reportTitle || report.referenceNumber || report.id}.`, 'success');
+    if (approvedReport.executiveEmail) notify(`Full Audit Report emailed to Executives: ${approvedReport.executiveEmail.recipients.join(', ')}.`, 'success');
+    else notify('No Executive recipients are set in Maintenance Table, so the Audit Report was not emailed.', 'warning');
   };
 
   const handleLogin = (role: Role) => {
@@ -301,7 +344,10 @@ const App: React.FC = () => {
           role={currentRole} 
           users={users}
           issuingAuditor={currentUser?.name || ''}
-          onNotify={notify} 
+          reports={auditReports}
+          executiveRecipients={executiveRecipients}
+          onFinalApproveReport={finalApproveReportAndSend}
+          onNotify={notify}
           setActiveModule={setActiveModule}
         />
       );
@@ -316,6 +362,7 @@ const App: React.FC = () => {
           actionPlans={actionPlans}
           role={currentRole}
           currentUserName={currentUser?.name || ''}
+          executiveRecipients={executiveRecipients}
           onNotify={notify}
         />
       );
@@ -326,6 +373,8 @@ const App: React.FC = () => {
           reports={auditReports}
           role={currentRole}
           currentUserName={currentUser?.name || ''}
+          executiveRecipients={executiveRecipients}
+          onFinalApproveReport={finalApproveReportAndSend}
           onNotify={notify}
         />
       );
@@ -360,6 +409,8 @@ const App: React.FC = () => {
         <MaintenanceTableModule
           departments={departments}
           setDepartments={setDepartments}
+          executiveRecipients={executiveRecipients}
+          setExecutiveRecipients={setExecutiveRecipients}
           setNcars={setNcars}
           onNotify={notify}
         />

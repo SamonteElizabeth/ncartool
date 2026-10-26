@@ -55,6 +55,80 @@ export const INITIAL_AUDIT_PLANS: AuditPlan[] = [
   }
 ];
 
+// Sample Audit Report AR-2026-HM-001: 5 NCARs + 1 OFI already approved by the Lead Auditor and waiting for
+// the Head Manager to approve each one before the report can be final-approved and emailed to Executives.
+const HEAD_REVIEW_REPORT_ID = 'AR-2026-HM-001';
+const QMS_2026_REPORT_ID = 'AR-2026-QMS-001';
+const ISMS_2026_REPORT_ID = 'AR-2026-ISMS-001';
+const headReviewTrail = (id: string, auditee: string, isOFI = false, reportId = HEAD_REVIEW_REPORT_ID) => [
+  { id: `trail-${id}-1`, action: 'PART1_SUBMITTED', actionLabel: 'Part 1 Submitted & Assigned', performedBy: 'John Doe', role: 'AUDITOR' as const, timestamp: '2026-10-06T01:00:00.000Z', newStatus: NCARStatus.PART1_SUBMITTED, comments: `Part 1 finding submitted via Audit Report ${reportId}.` },
+  { id: `trail-${id}-2`, action: 'PART2_SUBMITTED', actionLabel: isOFI ? 'OFI Response Submitted' : 'Action Plan Submitted (CAP)', performedBy: auditee, role: 'AUDITEE' as const, timestamp: '2026-10-10T03:00:00.000Z', previousStatus: NCARStatus.PART1_SUBMITTED, newStatus: NCARStatus.ACTION_PLAN_SUBMITTED, comments: isOFI ? 'OFI accepted by the auditee.' : 'Corrective Action Plan (CAP) submitted.' },
+  { id: `trail-${id}-3`, action: 'LEAD_APPROVED', actionLabel: 'Approved by Lead Auditor', performedBy: 'John Doe', role: 'LEAD_AUDITOR' as const, timestamp: '2026-10-21T02:00:00.000Z', previousStatus: NCARStatus.ACTION_PLAN_SUBMITTED, newStatus: NCARStatus.CAP_LEAD_APPROVED, comments: 'Lead Auditor approved the report package and forwarded it to the Head Manager.' }
+];
+const headReviewNcar = (id: string, statement: string, requirement: string, evidence: string, findingType: 'Major' | 'Minor', clause: string, dept: string, auditee: string, processName: string, reportId = HEAD_REVIEW_REPORT_ID): NCAR => ({
+  id, auditPlanId: 'AP_000001_202310', statement, requirement, evidence, findingType, standardClause: clause, clauseNumber: clause,
+  area: dept, auditor: 'John Doe', auditee, createdAt: '2026-10-06T01:00:00.000Z', status: NCARStatus.CAP_LEAD_APPROVED, deadline: '2026-10-13',
+  auditType: 'QMS', processName, isEscalated: false, systemType: 'QMS', issueDate: '2026-10-06', processInvolved: processName,
+  managerResponsible: auditee, departmentResponsible: dept, issuingAuditor: 'John Doe', createdByRole: 'AUDITOR',
+  assignedByAuditReportId: reportId, assignedAt: '2026-10-06T01:00:00.000Z', responseAt: '2026-10-10T03:00:00.000Z',
+  auditTrail: headReviewTrail(id, auditee, false, reportId)
+});
+const HEAD_REVIEW_NCARS: NCAR[] = [
+  headReviewNcar('NCAR2026-HM-001', 'Customer complaints were closed without documented root cause analysis.', 'Complaint Handling Procedure, Section 6.3', 'Four of twelve sampled complaints closed in Q3 2026 had no root cause recorded.', 'Major', '10.2', 'DISD', 'Bob Johnson', 'Complaint Handling'),
+  headReviewNcar('NCAR2026-HM-002', 'Training records for new hires were incomplete.', 'Competence and Training Procedure, Section 4.1', 'Three of eight new hires had no signed onboarding training record.', 'Minor', '7.2', 'DISD', 'Alex Johnson', 'Onboarding'),
+  headReviewNcar('NCAR2026-HM-003', 'Calibration of measuring equipment was overdue.', 'Monitoring and Measuring Resources Procedure, Section 3.2', 'Two torque gauges were used past their calibration due date in September 2026.', 'Major', '7.1', 'TASS', 'Charlie Davis', 'Equipment Maintenance'),
+  headReviewNcar('NCAR2026-HM-004', 'Obsolete document versions were in use at a workstation.', 'Document Control Procedure, Section 5.4', 'Revision 2 of the work instruction was posted while Revision 4 is current.', 'Minor', '7.5', 'TASS', 'Charlie Davis', 'Document Control'),
+  headReviewNcar('NCAR2026-HM-005', 'Supplier evaluations were not performed annually.', 'Supplier Management Procedure, Section 2.3', 'Five active suppliers had no evaluation on file for 2025 or 2026.', 'Minor', '8.4', 'DISD', 'Bob Johnson', 'Purchasing'),
+  {
+    ...headReviewNcar('OFI2026-HM-001', 'Consider a shared dashboard for open corrective actions so department heads can track due dates.', '', 'Several CAP due dates were tracked only in personal spreadsheets.', 'Minor', '10.3', 'DISD', 'Bob Johnson', 'Corrective Action'),
+    findingType: 'OFI',
+    auditTrail: headReviewTrail('OFI2026-HM-001', 'Bob Johnson', true),
+    ofiResponse: { status: 'Accepted', responseDate: '2026-10-10', applicable: 'Yes', correctiveActionPlan: 'Build a CAP tracking dashboard in the team site.', responsiblePerson: 'Bob Johnson', targetDate: '2026-12-15' }
+  }
+];
+// Sample Audit Report "QMS 2026": 1 NCAR + 1 OFI waiting for Head Manager approval.
+const QMS_2026_NCARS: NCAR[] = [
+  headReviewNcar('NCAR2026-QMS-001', 'Internal audit findings from the previous cycle were not tracked to closure.', 'Internal Audit Procedure, Section 7.2', 'Two findings from the 2025 internal audit had no closure evidence or follow-up record.', 'Minor', '9.2', 'DISD', 'Bob Johnson', 'Internal Audit', QMS_2026_REPORT_ID),
+  {
+    ...headReviewNcar('OFI2026-QMS-001', 'Consider adding quality objectives progress to the monthly management meeting agenda.', '', 'Quality objectives were reviewed only during the annual management review.', 'Minor', '6.2', 'TASS', 'Charlie Davis', 'Management Review', QMS_2026_REPORT_ID),
+    findingType: 'OFI',
+    auditTrail: headReviewTrail('OFI2026-QMS-001', 'Charlie Davis', true, QMS_2026_REPORT_ID),
+    ofiResponse: { status: 'Accepted', responseDate: '2026-10-10', applicable: 'Yes', correctiveActionPlan: 'Add a standing quality objectives item to the monthly management meeting.', responsiblePerson: 'Charlie Davis', targetDate: '2026-11-30' }
+  }
+];
+
+// Sample Audit Report "ISMS 2026": 1 NCAR waiting for Head Manager approval.
+const ISMS_2026_NCARS: NCAR[] = [{
+  ...headReviewNcar('NCAR2026-ISMS-001', 'User access rights were not removed promptly for resigned employees.', 'Access Control Policy, Section 3.4', 'Three of ten sampled resigned employees still had active system accounts 30 days after their last working day.', 'Major', 'A.5.18', 'TASS', 'Charlie Davis', 'Access Management', ISMS_2026_REPORT_ID),
+  auditType: 'ISMS',
+  systemType: 'ISMS'
+}];
+
+// Sample OFI in the approved report IAR-2026-001 that the auditee marked Implemented; waiting for Lead Auditor approval.
+const IMPLEMENTED_OFI: NCAR = {
+  ...headReviewNcar('OFI2026-IMPL-001', 'Consider automating reminders for expense approvals pending more than three days.', '', 'Approvers relied on manual follow-ups for pending expense requests.', 'Minor', '8.1', 'DISD', 'Bob Johnson', 'Expense Management', 'AR-2026-OFI-001'),
+  findingType: 'OFI',
+  status: NCARStatus.CLOSED,
+  auditTrail: [
+    { id: 'trail-OFI2026-IMPL-001-4', action: 'OFI_IMPLEMENTATION_SUBMITTED', actionLabel: 'OFI Implementation Submitted for Approval', performedBy: 'Bob Johnson', role: 'AUDITEE', timestamp: '2026-10-22T06:00:00.000Z', comments: 'Automatic reminders are live for all approvers.' },
+    ...headReviewTrail('OFI2026-IMPL-001', 'Bob Johnson', true, 'AR-2026-OFI-001')
+  ],
+  ofiResponse: {
+    status: 'Implemented',
+    responseDate: '2026-10-10',
+    applicable: 'Yes',
+    correctiveActionPlan: 'Configure automatic reminders in the expense system for approvals pending more than three days.',
+    responsiblePerson: 'Bob Johnson',
+    targetDate: '2026-10-31',
+    implementationProgress: 'Automatic reminders are live for all approvers. Pending approvals over three days dropped from 14 to 2 in the first week.',
+    evidenceAttachments: [{ name: 'reminder-configuration.txt', type: 'text/plain', size: 52, dataUrl: 'data:text/plain;base64,UmVtaW5kZXIgcnVsZTogcGVuZGluZyA+IDMgZGF5cyAtPiBlbWFpbCBhcHByb3Zlci4=' }],
+    updatedAt: '2026-10-22T06:00:00.000Z',
+    implementationReview: { stage: 'PENDING_LEAD', submittedAt: '2026-10-22T06:00:00.000Z' }
+  }
+};
+
+export const ALWAYS_LOADED_DEMO_NCAR_IDS = ['NCAR2026-SLA-001', 'NCAR2026-EXEC-001', ...[...HEAD_REVIEW_NCARS, ...QMS_2026_NCARS, ...ISMS_2026_NCARS, IMPLEMENTED_OFI].map(ncar => ncar.id)];
+
 export const INITIAL_NCARS: NCAR[] = [
   {
     id: 'NCAR_000001_202309',
@@ -342,7 +416,74 @@ export const INITIAL_NCARS: NCAR[] = [
     assignedByAuditReportId: 'AR-2026-OFI-001',
     assignedAt: '2026-10-13T00:00:00.000Z',
     ofiResponse: { status: 'Pending', responseDate: '' }
-  }
+  },
+  {
+    id: 'NCAR2026-EXEC-001',
+    auditPlanId: 'AP_000001_202310',
+    statement: 'Vendor payments were released without the required second-level approval.',
+    requirement: 'Accounts Payable Procedure, Section 4.2',
+    evidence: 'Two of ten sampled vendor payments in September 2026 had no second approver recorded in the payment system.',
+    findingType: 'Minor',
+    standardClause: '8.1',
+    clauseNumber: '8.1',
+    area: 'DISD',
+    auditor: 'John Doe',
+    auditee: 'Bob Johnson',
+    createdAt: '2026-10-05T01:00:00.000Z',
+    status: NCARStatus.CAP_LEAD_APPROVED,
+    deadline: '2026-10-12',
+    auditType: 'Financial',
+    processName: 'Accounts Payable',
+    isEscalated: false,
+    systemType: 'Business',
+    issueDate: '2026-10-05',
+    processInvolved: 'Accounts Payable',
+    managerResponsible: 'Bob Johnson',
+    departmentResponsible: 'DISD',
+    issuingAuditor: 'John Doe',
+    createdByRole: 'AUDITOR',
+    assignedByAuditReportId: 'AR-2026-EXEC-001',
+    assignedAt: '2026-10-05T01:00:00.000Z',
+    responseAt: '2026-10-09T03:00:00.000Z',
+    auditTrail: [
+      {
+        id: 'trail-exec-1',
+        action: 'PART1_SUBMITTED',
+        actionLabel: 'Part 1 Submitted & Assigned',
+        performedBy: 'John Doe',
+        role: 'AUDITOR',
+        timestamp: '2026-10-05T01:00:00.000Z',
+        newStatus: NCARStatus.PART1_SUBMITTED,
+        comments: 'Part 1 finding submitted via Audit Report AR-2026-EXEC-001.'
+      },
+      {
+        id: 'trail-exec-2',
+        action: 'PART2_SUBMITTED',
+        actionLabel: 'Action Plan Submitted (CAP)',
+        performedBy: 'Bob Johnson',
+        role: 'AUDITEE',
+        timestamp: '2026-10-09T03:00:00.000Z',
+        previousStatus: NCARStatus.PART1_SUBMITTED,
+        newStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        comments: 'Corrective Action Plan (CAP) submitted.'
+      },
+      {
+        id: 'trail-exec-3',
+        action: 'LEAD_APPROVED',
+        actionLabel: 'Approved by Lead Auditor',
+        performedBy: 'John Doe',
+        role: 'LEAD_AUDITOR',
+        timestamp: '2026-10-20T02:00:00.000Z',
+        previousStatus: NCARStatus.ACTION_PLAN_SUBMITTED,
+        newStatus: NCARStatus.CAP_LEAD_APPROVED,
+        comments: 'Lead Auditor verified the CAP and forwarded it to the Head Manager for final approval.'
+      }
+    ]
+  },
+  ...HEAD_REVIEW_NCARS,
+  ...QMS_2026_NCARS,
+  ...ISMS_2026_NCARS,
+  IMPLEMENTED_OFI
 ];
 
 export const INITIAL_AUDIT_REPORTS: AuditReport[] = [{
@@ -357,7 +498,7 @@ export const INITIAL_AUDIT_REPORTS: AuditReport[] = [{
   objectives: '• Review expense processing and approval controls.',
   conclusion: 'Controls are operating, with an opportunity to improve approval trend monitoring.',
   ncarIds: [],
-  ofiIds: ['OFI2026-AR-001'],
+  ofiIds: ['OFI2026-AR-001', 'OFI2026-IMPL-001'],
   repeatNcarIds: [],
   clauses: [],
   workflowStep: 5,
@@ -387,6 +528,90 @@ export const INITIAL_AUDIT_REPORTS: AuditReport[] = [{
   approvedAt: '2026-10-01T01:00:00.000Z',
   createdAt: '2026-09-30T08:00:00.000Z',
   updatedAt: '2026-10-01T01:00:00.000Z'
+}, {
+  id: 'AR-2026-EXEC-001',
+  reportTitle: 'Sample Internal Audit Report — Accounts Payable',
+  subject: 'Accounts Payable',
+  referenceNumber: 'IAR-2026-EXEC-001',
+  linkedAuditPlanId: 'AP_000001_202310',
+  preparedBy: 'John Doe',
+  releaseDate: '2026-10-05',
+  confidentiality: 'Confidential',
+  objectives: '• Review approval controls over vendor payments.',
+  conclusion: 'One NCAR was issued for payments released without second-level approval. The CAP has been reviewed by the Lead Auditor.',
+  ncarIds: ['NCAR2026-EXEC-001'],
+  ofiIds: [],
+  repeatNcarIds: [],
+  clauses: [],
+  workflowStep: 5,
+  status: 'Pending Final Approval',
+  leadApprovedBy: 'John Doe',
+  leadApprovedAt: '2026-10-20T02:00:00.000Z',
+  createdAt: '2026-10-04T08:00:00.000Z',
+  updatedAt: '2026-10-20T02:00:00.000Z'
+}, {
+  id: HEAD_REVIEW_REPORT_ID,
+  reportTitle: 'Sample Internal Audit Report — Quality Management System',
+  subject: 'Quality Management System',
+  referenceNumber: 'IAR-2026-HM-001',
+  linkedAuditPlanId: 'AP_000001_202310',
+  preparedBy: 'John Doe',
+  releaseDate: '2026-10-06',
+  confidentiality: 'Confidential',
+  objectives: '• Assess conformity of complaint handling, training, calibration, document control and supplier management.',
+  conclusion: 'Five NCARs and one OFI were issued. All responses were approved by the Lead Auditor and await Head Manager approval.',
+  ncarIds: HEAD_REVIEW_NCARS.filter(ncar => ncar.findingType !== 'OFI').map(ncar => ncar.id),
+  ofiIds: HEAD_REVIEW_NCARS.filter(ncar => ncar.findingType === 'OFI').map(ncar => ncar.id),
+  repeatNcarIds: [],
+  clauses: [],
+  workflowStep: 5,
+  status: 'Pending Final Approval',
+  leadApprovedBy: 'John Doe',
+  leadApprovedAt: '2026-10-21T02:00:00.000Z',
+  createdAt: '2026-10-05T08:00:00.000Z',
+  updatedAt: '2026-10-21T02:00:00.000Z'
+}, {
+  id: QMS_2026_REPORT_ID,
+  reportTitle: 'QMS 2026',
+  subject: 'Quality Management System',
+  referenceNumber: 'IAR-2026-QMS-001',
+  linkedAuditPlanId: 'AP_000001_202310',
+  preparedBy: 'John Doe',
+  releaseDate: '2026-10-06',
+  confidentiality: 'Confidential',
+  objectives: '• Assess the effectiveness of internal audit follow-up and management review of quality objectives.',
+  conclusion: 'One NCAR and one OFI were issued. Both responses were approved by the Lead Auditor and await Head Manager approval.',
+  ncarIds: ['NCAR2026-QMS-001'],
+  ofiIds: ['OFI2026-QMS-001'],
+  repeatNcarIds: [],
+  clauses: [],
+  workflowStep: 5,
+  status: 'Pending Final Approval',
+  leadApprovedBy: 'John Doe',
+  leadApprovedAt: '2026-10-21T02:00:00.000Z',
+  createdAt: '2026-10-05T08:00:00.000Z',
+  updatedAt: '2026-10-21T02:00:00.000Z'
+}, {
+  id: ISMS_2026_REPORT_ID,
+  reportTitle: 'ISMS 2026',
+  subject: 'Information Security Management System',
+  referenceNumber: 'IAR-2026-ISMS-001',
+  linkedAuditPlanId: 'AP_000001_202310',
+  preparedBy: 'John Doe',
+  releaseDate: '2026-10-06',
+  confidentiality: 'Confidential',
+  objectives: '• Assess the effectiveness of user access management controls.',
+  conclusion: 'One NCAR was issued. The CAP was approved by the Lead Auditor and awaits Head Manager approval.',
+  ncarIds: ['NCAR2026-ISMS-001'],
+  ofiIds: [],
+  repeatNcarIds: [],
+  clauses: [],
+  workflowStep: 5,
+  status: 'Pending Final Approval',
+  leadApprovedBy: 'John Doe',
+  leadApprovedAt: '2026-10-21T02:00:00.000Z',
+  createdAt: '2026-10-05T08:00:00.000Z',
+  updatedAt: '2026-10-21T02:00:00.000Z'
 }];
 
 export const INITIAL_ACTION_PLANS: ActionPlan[] = [
@@ -423,5 +648,38 @@ export const INITIAL_ACTION_PLANS: ActionPlan[] = [
     dueDate: '2023-12-30',
     submittedAt: '2023-12-10T11:00:00Z',
     remarks: 'expense_approval_process_update.pdf'
-  }
+  },
+  {
+    id: 'ACT2026-EXEC-001',
+    ncarId: 'NCAR2026-EXEC-001',
+    immediateCorrection: 'Both payments were reviewed and approved retroactively by the Finance Manager.',
+    responsiblePerson: 'Bob Johnson',
+    rootCause: 'The payment system allowed release with a single approver when the second approver was on leave.',
+    correctiveAction: 'Configure the payment system to block release until two approvers sign off, and assign a backup approver.',
+    dueDate: '2026-11-30',
+    submittedAt: '2026-10-09T03:00:00.000Z',
+    responseDate: '2026-10-09',
+    consequenceImpact: 'Risk of unauthorized or erroneous vendor payments.',
+    correctionResponsible: 'Bob Johnson',
+    correctionTargetDate: '2026-10-15',
+    canOccurElsewhere: 'No',
+    capResponsible: 'Bob Johnson',
+    capTargetDate: '2026-11-30'
+  },
+  ...[...HEAD_REVIEW_NCARS, ...QMS_2026_NCARS, ...ISMS_2026_NCARS].filter(ncar => ncar.findingType !== 'OFI').map((ncar): ActionPlan => ({
+    id: ncar.id.replace('NCAR', 'ACT'),
+    ncarId: ncar.id,
+    immediateCorrection: `Contained the issue in ${ncar.processName} and corrected the affected records.`,
+    responsiblePerson: ncar.auditee,
+    rootCause: 'The procedure step was not built into the team checklist, so it depended on individual memory.',
+    correctiveAction: 'Add the step to the checklist, brief the team, and include it in the monthly self-check.',
+    dueDate: '2026-11-30',
+    submittedAt: '2026-10-10T03:00:00.000Z',
+    responseDate: '2026-10-10',
+    correctionResponsible: ncar.auditee,
+    correctionTargetDate: '2026-10-20',
+    canOccurElsewhere: 'No',
+    capResponsible: ncar.auditee,
+    capTargetDate: '2026-11-30'
+  }))
 ];
